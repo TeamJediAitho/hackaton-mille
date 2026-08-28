@@ -467,7 +467,15 @@ def ingest_corpus(
                 )
                 if False not in pipelines:
                     pipelines[False] = build_ingest_pipeline(False)
-                chunks = list(pipelines[False].run(file_path=str(side)))
+                merged = list(pipelines[False].run(file_path=str(side)))
+                # Il vettore e l'indice lessicale vedono OCR + didascalia; il testo CONSEGNATO
+                # resta il solo OCR. Un contesto non rintracciabile nel corpus azzera la
+                # Faithfulness della domanda (SCORING_AND_FAIRNESS.md), e la didascalia e' una
+                # nostra ricostruzione: aiuta a trovare il documento, non puo' fare da prova.
+                if len(merged) == 1:
+                    merged[0].text = ocr_text
+                    merged[0].metadata["caption"] = text
+                    chunks = merged
         return needs_ocr, chunks
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
@@ -590,6 +598,8 @@ def _lexical_text(chunk: Any) -> str:
     metadata = getattr(chunk, "metadata", None)
     return " ".join([
         text,
+        # E7: la didascalia dell'immagine e' indicizzata ma non consegnata (vedi ingest_one).
+        _meta_get(metadata, "caption"),
         _meta_get(metadata, "title"),
         _meta_get(metadata, "qualifica"),
         _meta_get(metadata, "reliability"),
