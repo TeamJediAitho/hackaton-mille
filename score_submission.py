@@ -53,6 +53,14 @@ def normalize(text: str) -> str:
     """Minuscole, senza accenti, spazi compattati: l'OCR dell'archivio e' rumoroso."""
     stripped = unicodedata.normalize("NFKD", text.lower())
     stripped = "".join(char for char in stripped if not unicodedata.combining(char))
+    # Apostrofi e virgolette tipografiche: il gold scrive «Sant'Elia» con U+2019, il generatore
+    # risponde «Sant'Elia» con U+0027. NFKD non li unifica e il fatto risultava mancante.
+    # Il generatore usa markdown: «le carte **non** provano» spezzava la frase e il fatto
+    # risultava mancante. Asterischi, underscore e backtick non portano significato qui.
+    stripped = stripped.translate({ord(c): None for c in "*_`"})
+    for curly, plain in (("’", "'"), ("‘", "'"), ("ʼ", "'"),
+                         ("“", '"'), ("”", '"')):
+        stripped = stripped.replace(curly, plain)
     return " ".join(stripped.split())
 
 

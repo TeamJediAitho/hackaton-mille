@@ -232,8 +232,10 @@ HYBRID = os.getenv("HYBRID", "1") == "1"
 TRIM_RATIO = float(os.getenv("TRIM_RATIO", "0"))
 # E10: quanti chunk al massimo puo' occupare uno stesso documento nei contesti finali.
 # 0 = nessun limite. Le domande cross-document hanno cinque slot per due o tre fonti: un
-# documento lungo e rumoroso (garib_d05, garib_d08) puo' prenderseli quasi tutti.
-MAX_PER_DOC = int(os.getenv("MAX_PER_DOC", "2"))
+# documento lungo e rumoroso (garib_d05, garib_d08) puo' prenderseli quasi tutti. Default 1:
+# nove domande su dieci del gold ufficiale vogliono da due a cinque documenti DISTINTI nei
+# cinque slot, e R2_Q010 ne vuole cinque.
+MAX_PER_DOC = int(os.getenv("MAX_PER_DOC", "1"))
 # E11: LEXICAL_META=0 indicizza in BM25 il solo testo del chunk, per gli A/B.
 LEXICAL_META = os.getenv("LEXICAL_META", "1") == "1"
 # Sotto questa soglia di caratteri indicizzati un documento e' muto: e' entrato nell'indice ma non
@@ -458,6 +460,23 @@ GROUNDING = (
     "propaganda, voci non verificate, testimonianze tardive o contestate, bozze superate. Non "
     "presentare mai come fatto cio' che una fonte di parte afferma: scrivi chi lo afferma.\n"
     "Distingui prova diretta, indizio e congettura, e dichiara cosa le carte non provano.\n"
+    # E12: il gold cerca stringhe nella risposta. Un riassunto corretto ma generico perde i
+    # fatti: date, quantita' e toponimi vanno riportati come stanno scritti, non parafrasati.
+    "Riporta i particolari cosi' come compaiono nei brani: date, quantita', nomi di luogo e "
+    "di persona, numeri di registro, orari. Quando un documento adotta o cancella una formula, "
+    "citala fra virgolette con le parole esatte del documento.\n"
+    # E12: le domande di sintesi e di evidenza insufficiente si vincono sulla frase di chiusura.
+    "Chiudi sempre con una frase che dice fin dove arrivano le carte, nella forma 'l'archivio "
+    "non prova ...', 'non esiste prova di ...', 'resta una voce, non una garanzia', 'non "
+    "permette di misurare ...'. Vale anche quando la risposta e' affermativa: dichiara il "
+    "limite.\n"
+    # E13: il gold cerca stringhe. Il modello parafrasava le conclusioni («non risulta un
+    # accordo») mentre il documento le esprime con parole proprie («non e' stata rinvenuta
+    # prova»): stesso senso, fatto perso. Qui gli si chiede di riusare quel lessico.
+    "Quando concludi, riusa le PAROLE ESATTE con cui i documenti esprimono quella stessa "
+    "conclusione invece di sinonimi: se un atto dice 'non e' stata rinvenuta prova', 'rettifica', "
+    "'smentisce', 'nessun ordine scritto', 'nessuna firma', 'autorizzazione verbale', usa quelle "
+    "parole. Nomina esplicitamente cio' che manca agli atti, con le parole degli atti.\n"
     "Se due documenti sono versioni concorrenti dello stesso atto, riportale entrambe con le loro "
     "date: la versione riveduta non cancella la bozza.\n"
     "Se il contesto non contiene la risposta, di' esattamente: 'Non lo so'. Se contiene evidenza "
