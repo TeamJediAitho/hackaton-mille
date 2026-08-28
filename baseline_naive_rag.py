@@ -184,14 +184,14 @@ def choose_primary(document: dict, project_root: Path) -> Path | None:
     return candidates[0]
 
 
-def iter_ingest_files(manifest: dict, project_root: Path) -> list[tuple[Path, str]]:
-    rows: list[tuple[Path, str]] = []
+def iter_ingest_files(manifest: dict, project_root: Path) -> list[tuple[Path, str, str]]:
+    rows: list[tuple[Path, str, str]] = []
     for document in manifest["documents"]:
         primary = choose_primary(document, project_root)
         if primary is None:
             print(f"skip (nessun file): {document['document_id']}")
             continue
-        rows.append((primary, document["document_id"]))
+        rows.append((primary, document["document_id"], document.get("modality", "text")))
     return rows
 
 
@@ -240,9 +240,22 @@ def build_clients(api_key: str, model: str):
     return embedder, llm
 
 
+# Modalita' che richiedono OCR (immagine, nessun layer di testo).
+# text/table -> DoclingParser usa il layer di testo del PDF (pulito e veloce).
+OCR_MODALITIES = {"scan", "map"}
+
+
+def _docling_parser(needs_ocr: bool):
+    from datapizza.modules.parsers.docling import DoclingParser
+    from datapizza.modules.parsers.docling.ocr_options import OCREngine, OCROptions
+
+    engine = OCREngine.EASY_OCR if needs_ocr else OCREngine.NONE
+    return DoclingParser(ocr_options=OCROptions(engine=engine))
+
+
 def ingest_corpus(
     *,
-    files: list[tuple[Path, str]],
+    files: list[tuple[Path, str, str]],
     embedder,
     qdrant_path: Path,
     collection: str,
@@ -250,7 +263,6 @@ def ingest_corpus(
 ):
     from datapizza.core.vectorstore import VectorConfig
     from datapizza.embedders import ChunkEmbedder
-    from datapizza.modules.parsers.docling import DoclingParser
     from datapizza.modules.splitters import RecursiveSplitter
     from datapizza.pipeline import IngestionPipeline
 
@@ -272,21 +284,26 @@ def ingest_corpus(
         collection_name=collection,
         vector_config=[VectorConfig(dimensions=EMBEDDING_DIM, name=EMB_NAME)],
     )
-    ingestion = IngestionPipeline(
-        modules=[
-            DoclingParser(),
-            RecursiveSplitter(max_char=1024, overlap=128),
-            ChunkEmbedder(client=embedder, embedding_name=EMB_NAME),
-        ],
-        vector_store=vector_store,
-        collection_name=collection,
-    )
-    for path, document_id in files:
-        ingestion.run(
+    def make_pipeline(needs_ocr: bool) -> IngestionPipeline:
+        return IngestionPipeline(
+            modules=[
+                _docling_parser(needs_ocr),
+                RecursiveSplitter(max_char=1024, overlap=128),
+                ChunkEmbedder(client=embedder, embedding_name=EMB_NAME),
+            ],
+            vector_store=vector_store,
+            collection_name=collection,
+        )
+
+    pipelines: dict[bool, IngestionPipeline] = {}
+    for path, document_id, modality in files:
+        needs_ocr = modality in OCR_MODALITIES
+        pipeline = pipelines.setdefault(needs_ocr, make_pipeline(needs_ocr))
+        pipeline.run(
             file_path=str(path),
             metadata={"document_id": document_id, "source_file": path.name},
         )
-        print(f"ingest: {document_id} <- {path.name}")
+        print(f"ingest ({'OCR' if needs_ocr else 'testo'}): {document_id} <- {path.name}")
     n_chunk = len(list(vector_store.dump_collection(collection)))
     print(f"Ingest completato: {n_chunk} chunk in '{collection}'")
     return vector_store
