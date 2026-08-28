@@ -204,10 +204,14 @@ EMB_NAME = "content_embedding"
 EMBEDDING_MODEL = "text-embedding-3-small"
 EMBEDDING_DIM = 1536
 
-# Retrieval: recupera largo, poi accorpa i chunk per document_id fino a MAX_CONTEXTS.
-# Piu' documenti distinti nei 5 slot = piu' recall/precision; il generatore riceve
-# comunque tutto il testo dei chunk recuperati (concatenati per documento).
-RETRIEVE_K = 12
+# Retrieval: recupera largo, accorpa i chunk per document_id, poi tiene solo i
+# documenti con score di similarita' entro SCORE_MARGIN dal migliore (max 5).
+# Cosi' i contesti sono POCHI e PERTINENTI: 1 per una domanda factual netta,
+# di piu' per una domanda di sintesi dove i punteggi sono ravvicinati.
+RETRIEVE_K = 10
+CHUNKS_PER_DOC = 2   # per tenere il contesto (e latenza/costo) sotto controllo
+SCORE_MARGIN = 0.08  # ponytail: soglia empirica su text-embedding-3-small; tarare col feedback
+MIN_CONTEXTS = 2     # pavimento: non scendere mai sotto 2 documenti (Recall vale il doppio di Precision)
 
 
 def _local_qdrant(path: Path):
@@ -302,36 +306,50 @@ GROUNDING = (
 
 
 def dense_retrieve(embedder, vector_store, collection: str, domanda: str, k: int = RETRIEVE_K):
+    """Ritorna [{document_id, text, score}] ordinati per similarita' decrescente.
+    Usa il client Qdrant diretto perche' datapizza `search()` scarta lo score."""
     query_vector = embedder.embed(domanda)
-    return vector_store.search(
-        collection_name=collection,
-        query_vector=query_vector,
-        k=k,
-        vector_name=EMB_NAME,
+    result = vector_store.get_client().query_points(
+        collection_name=collection, query=query_vector, using=EMB_NAME, limit=k
     )
+    return [
+        {
+            "document_id": _meta_get(point.payload, "document_id"),
+            "text": (point.payload.get("text") or "").strip(),
+            "score": float(point.score),
+        }
+        for point in result.points
+    ]
 
 
-def merge_contexts(hits: list[Any], max_docs: int = 5) -> list[dict]:
-    """Un documento per contesto: accorpa i chunk dello stesso document_id
-    (nell'ordine di retrieval) e tiene i primi `max_docs` documenti.
-    Cosi' i 5 slot contengono 5 documenti distinti invece di 2-3 ripetuti."""
+def merge_contexts(hits: list[dict], max_docs: int = 5, margin: float = SCORE_MARGIN) -> list[dict]:
+    """Un documento per contesto. Accorpa i chunk per document_id (ordine di
+    retrieval) e tiene solo i documenti il cui miglior chunk ha score entro
+    `margin` dal migliore in assoluto, fino a `max_docs`."""
     order: list[str] = []
     by_doc: dict[str, list[str]] = {}
+    top_score: dict[str, float] = {}
     for hit in hits:
-        document_id = _meta_get(getattr(hit, "metadata", None), "document_id")
-        content = (getattr(hit, "text", None) or "").strip()
-        if not document_id or not content:
+        document_id, text = hit["document_id"], hit["text"]
+        if not document_id or not text:
             continue
         if document_id not in by_doc:
             by_doc[document_id] = []
             order.append(document_id)
-        by_doc[document_id].append(content)
-    contexts: list[dict] = []
-    for rank, document_id in enumerate(order[:max_docs], start=1):
-        contexts.append(
-            {"rank": rank, "document_id": document_id, "content": "\n\n".join(by_doc[document_id])}
-        )
-    return contexts
+            top_score[document_id] = hit["score"]
+        if len(by_doc[document_id]) < CHUNKS_PER_DOC:
+            by_doc[document_id].append(text)
+    if not order:
+        return []
+    best = top_score[order[0]]
+    kept = [d for d in order if top_score[d] >= best - margin]
+    kept = (kept or order)[: max(1, max_docs)]
+    if len(kept) < MIN_CONTEXTS:
+        kept = order[: min(MIN_CONTEXTS, max_docs, len(order))]
+    return [
+        {"rank": rank, "document_id": d, "content": "\n\n".join(by_doc[d])}
+        for rank, d in enumerate(kept, start=1)
+    ]
 
 
 def _format_contexts(contexts: list[dict]) -> str:
