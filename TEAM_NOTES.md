@@ -317,12 +317,14 @@ python score_submission.py --submission outputs/round1/regressione_act12.json \
 ## Esperimenti della Fase 2
 
 Protocollo invariato: una variabile alla volta, submission in `outputs/round2/`, confronto con
-`--baseline`, e **due** gate — le domande nuove (`eval/annotations_round_2.json`) e la regressione
-act 1+2 (`make regression`, soglie recall@5 ≥ 0,952 e MRR ≥ 0,886).
+`--baseline`, e **due** gate — le domande nuove e la regressione act 1+2 (`make regression`).
 
-Il gold del round 2 è scritto da noi (`annotation_source` lo dichiara) e copre le quattro famiglie
-difficili: solo-immagine (R2_Q001, R2_Q002), mappa (R2_Q003), conflitto di versione (R2_Q004),
-fonte dannosa e testimonianza contestata (R2_Q005, R2_Q006), propaganda (R2_Q007), registri (R2_Q008).
+> ⚠️ **Su quale gold sono misurati i numeri di questa sezione (E5, E9, E4, E2, E6).** Su un set di
+> **otto domande scritte dal team**, oggi in `eval/questions_round_2_generated.json` e
+> `eval/annotations_round_2_generated.json`. Le **dieci domande ufficiali** sono arrivate dopo:
+> **gli id coincidono ma le domande no** (l'R2_Q005 ufficiale è il promemoria manoscritto, non la
+> garanzia del console — quella è diventata l'R2_Q008). I numeri qui sotto restano la storia degli
+> esperimenti, non misure sulle domande ufficiali: quelle stanno nel Problema 10.
 
 ### Baseline di Fase 2 (pipeline di Fase 1, corpus act 1-4)
 
@@ -487,8 +489,9 @@ make regression
 - **I verdetti di generation oscillano fra run a configurazione identica** (R2_Q004, R2_Q006,
   R2_Q008 cambiano fra due esecuzioni dello stesso codice). Le metriche di retrieval sono invece
   deterministiche a indice fermo: sono quelle su cui si decide.
-- **Il gold del round 2 è nostro.** Otto domande scritte da noi non sono un campione: servono a
-  esercitare le famiglie difficili, non a stimare il punteggio.
+- **Le annotazioni restano nostre anche sulle domande ufficiali.** Le dieci domande vengono dalla
+  dashboard; `expected_answer`, `relevant_sources` e `required_facts` li abbiamo scritti noi
+  leggendo i documenti. Misurano in locale, non stimano il punteggio ufficiale.
 
 ### Le tre evidenze per lo speech
 
@@ -500,3 +503,91 @@ make regression
    erano due titoli duplicati e due date che avevano occupato i contesti al posto delle prove.
 3. **Un miglioramento misurato sul solo retrieval non è un miglioramento.** Lo sweep del chunking
    dava +0,075 di precision e, provato end-to-end, toglieva un fatto richiesto alla risposta.
+
+
+---
+
+## Problema 10 — Avevamo ottimizzato la metrica sbagliata
+
+- **Problema:** le dieci domande ufficiali del round 2 hanno sostituito il gold scritto dal team, e
+  il confronto fra i due set dice dove andavano spesi gli sforzi:
+
+  | | fonti rilevanti | gruppi di `required_facts` |
+  | --- | ---: | ---: |
+  | gold del team (su cui abbiamo ottimizzato E4, E10, E11) | 17 | 24 |
+  | gold ufficiale | 23 | **45** |
+
+  E4 aveva portato l'MRR a 1,000: il documento giusto al rank 1. Ma il gold ufficiale non premia il
+  ranking, premia se nel **testo della risposta** compaiono `«autorizzazione verbale»`,
+  `«convergenza prudenziale non formalizzata»`, `«annotazioni simulate»`, `«ventidue anni»`.
+  Recuperare il documento non produce la stringa.
+- **Misura della partizione** (30 documenti, gold ufficiale): 2 `OK`, **7 `GENERATION_FAIL`**,
+  1 `RETRIEVAL_FAIL`. Su R2_Q003, R2_Q004, R2_Q005 e R2_Q006 il recall è 1,00 **e il rank è 1**: il
+  documento è lì, in prima posizione, e la risposta perde il fatto.
+- **Cosa ho imparato:** un gold che cerca stringhe nella risposta si vince sulla generazione. Aver
+  misurato il retrieval per due fasi non era sbagliato, era insufficiente: nessuna delle metriche di
+  retrieval si muove di un millesimo fra la peggiore e la migliore configurazione di questa sessione
+  (recall 0,700, precision 0,260, hit 0,900, MRR 0,833 in tutte), mentre i fatti coperti cambiano.
+
+### Due falsi negativi nostri, non della pipeline
+
+Prima di attribuire alla pipeline fatti che stava già producendo, `normalize()` andava sistemata:
+
+| sintomo | causa | fatto recuperato |
+| --- | --- | --- |
+| `Sant'Elia` risultava mancante | il gold usa l'apostrofo tipografico U+2019, il modello risponde con U+0027, NFKD non li unifica | R2_Q005 |
+| `«le carte non provano»` risultava mancante | il modello scrive `le carte **non** provano`: i due asterischi del markdown spezzano la frase | R2_Q008, tornata da `ABSTENTION_MISS` a `OK` |
+
+**Lezione:** prima di aggiungere un esperimento, verificare che lo strumento di misura non stia
+nascondendo il risultato. Due righe in `normalize()` valevano più di un esperimento.
+
+### E12 e E13 — Il prompt che pretende il lessico dei documenti
+
+- **E12:** riporta i particolari verbatim (date, quantità, toponimi, orari), cita fra virgolette le
+  formule che un atto adotta o cancella, e **chiudi sempre** con una frase che dice fin dove
+  arrivano le carte.
+- **E13:** quando concludi, **riusa le parole esatte** con cui i documenti esprimono quella
+  conclusione. `nota_comitato_palermo_v2` scrive «Non è stata rinvenuta prova di un accordo
+  formale»; la risposta diceva la stessa cosa con parole sue e perdeva il punto.
+- **Risultato (30 documenti):** fatti mancanti **19 → 17**, retrieval invariato, latenza rientrata
+  in fascia piena. Zero chiamate in più.
+
+### E7 — Il captioner: quello che conta è l'autogol che ha evitato
+
+- **Modifica:** un modello con visione rilegge le immagini in ingest (una chiamata per file, in
+  cache come il parsing; `CAPTION_IMAGES=0` la spegne). `Sicily_location_map_960px` passa da
+  **0 a 125 caratteri**: nessun documento entra più nell'indice senza testo utile.
+- **Prima versione, sbagliata:** la didascalia finiva nel testo del contesto. `--verify-contexts`
+  ha segnalato **6 contesti non tracciabili**, e `SCORING_AND_FAIRNESS.md` azzera la Faithfulness
+  della domanda quando il contenuto non è riconducibile al suo `document_id`. Fino a 18 punti persi
+  per due toponimi.
+- **Versione corretta:** il vettore e l'indice lessicale vedono OCR + didascalia; il testo
+  consegnato al generatore e scritto in submission resta **il solo OCR**, verbatim. La ricostruzione
+  aiuta a *trovare* il documento, non può fare da prova. `--verify-contexts`: **6 → 0**.
+- **Esito onesto:** a didascalia non consegnata, i fatti coperti restano **29/45**, identici a
+  senza captioner. Il guadagno in fatti esisteva solo finché barava. Resta il documento muto
+  risolto e le mappe ritrovabili.
+
+### Stato sul corpus di gara (31 documenti, gold ufficiale)
+
+| recall@5 | precision@5 | hit@5 | MRR | fatti coperti | contesti non tracciabili | affermazioni vietate |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0,650 | 0,245 | 0,900 | 0,833 | 29/45 | **0** | **0** |
+
+### I tre buchi che restano, in ordine di peso
+
+1. **R2_Q010, retrieval 0,00.** «Qual è la tesi più forte sostenibile sul comportamento delle
+   élite»: nessun aggancio lessicale con le cinque fonti attese, che il denso non trova e che BM25
+   non può trovare perché la domanda non contiene nessuna loro parola. È l'unica domanda che chiede
+   espansione della query.
+2. **R2_Q003.** Il gold chiede Marsala, Mazara e Salemi: **sulla mappa non ci sono** — guardando
+   l'immagine si leggono solo Palermo, Trapani e Calatafimi, e `lettera_porti_feudi_01` dice
+   letteralmente «Evitate di scrivere i nomi dei porti nelle risposte». Vanno prese da altre carte.
+3. **R2_Q009, recall 0,33.** Servono i tre testi propagandistici insieme; ne arriva uno.
+
+### Nota sul modello
+
+Il passaggio a `gpt-5.4-nano` è avvenuto a metà sessione: ha visione (è ciò che rende possibile E7)
+ma porta la latenza media da 2 691 ms a **4 222-4 896 ms**, cioè dalla fascia 7/7 alla 5/7, e il
+costo da € 0,000326 a € 0,000932 (ancora 8/8). Tutti i numeri di questa sezione sono su quel
+modello; quelli delle sezioni precedenti no.
