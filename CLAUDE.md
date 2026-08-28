@@ -18,6 +18,16 @@ generation *without breaking the submission contract*.
 * `data/manifest.json` is the **source of truth**. A file in `data/` that is not in the manifest
   does not exist for ingest, indexing or `document_id` validation.
 
+### Regolamento
+
+Before making any change, read and understand the files in `regolamento/` — in particular:
+
+- `regolamento/docs/PARTICIPANT_GUIDE.md` — rules, deadlines, workflow
+- `regolamento/docs/SCORING_AND_FAIRNESS.md` — scoring criteria, thresholds, evaluation examples
+- `regolamento/docs/CONCEPTS.md` — project concepts and definitions
+
+These are the authoritative reference for the competition: when this file and the regolamento disagree, the regolamento wins.
+
 ### Layout
 
 | Path | Purpose |

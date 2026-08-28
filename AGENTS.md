@@ -84,6 +84,16 @@ Hard rules:
 * Abstention is a valid, rewarded answer when the evidence is thin.
 * `.env` holds the API key — it is gitignored, keep it out of commits and out of any output.
 
+## Project context
+
+Before making any change, read and understand the files in `regolamento/` — in particular:
+
+- `regolamento/docs/PARTICIPANT_GUIDE.md` — rules, deadlines, workflow
+- `regolamento/docs/SCORING_AND_FAIRNESS.md` — scoring criteria, thresholds, evaluation examples
+- `regolamento/docs/CONCEPTS.md` — project concepts and definitions
+
+These are the authoritative reference for the competition: when this file and the regolamento disagree, the regolamento wins.
+
 ## Core Principles
 
 * Before modifying code, understand the project structure and existing conventions.
