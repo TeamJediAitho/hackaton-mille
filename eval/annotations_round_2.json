@@ -1,0 +1,321 @@
+{
+  "round_id": "round_2",
+  "annotation_source": "team (non ufficiale): etichette scritte dal team leggendo il testo estratto dai documenti del manifest (act 1-4), per misurare il retrieval in locale sulle quattro famiglie difficili della Fase 2. Non provengono dalla piattaforma.",
+  "questions": [
+    {
+      "question_id": "R2_Q001",
+      "question": "Che cosa chiede il promemoria non firmato del 10 maggio riguardo ai dodici carri e alla luce del faro?",
+      "type": "factual",
+      "difficulty": "medium",
+      "expected_answer": "Il promemoria chiede che i dodici carri siano tenuti a Mazara e non al molo, senza ordine scritto, e che il segnale arrivi a Lo Bianco dalla casa Sant'Elia; il faro puo' restare a luce ridotta fra le ventidue e la mezzanotte, non oltre, evitando che una precauzione sembri una promessa.",
+      "relevant_sources": [
+        "scansione_manoscritta_01"
+      ],
+      "acceptable_sources": [
+        "agenda_incontri_01",
+        "registro_passaggio_01",
+        "mappa_porti_occidentali_annotata_01"
+      ],
+      "distractor_sources": [
+        "lettera_salina_01"
+      ],
+      "harmful_if_unqualified": [],
+      "forbidden_claims": [
+        "ordine scritto",
+        "il documento e firmato"
+      ],
+      "requires_abstention": false,
+      "required_facts": [
+        [
+          "Mazara"
+        ],
+        [
+          "dodici",
+          "12"
+        ],
+        [
+          "faro"
+        ]
+      ],
+      "uncertainty_required": false,
+      "judge_notes": "Famiglia «solo-immagine»: il fatto esiste soltanto nel PNG. Se il retrieval non lo porta, l'OCR non sta servendo a niente. Il documento e' un promemoria non firmato: la risposta non deve presentarlo come un ordine."
+    },
+    {
+      "question_id": "R2_Q002",
+      "question": "Che cosa dice la lettera danneggiata sulla protezione del console, e fin dove arriva il testo leggibile?",
+      "type": "factual",
+      "difficulty": "medium",
+      "expected_answer": "La lettera dice che il console non ha promesso protezione e che nessuno deve scrivere il contrario; i carri possono attendere lontano dal molo e, senza segnale, ogni preparativo dovra' sembrare commerciale. La parte finale della lettera e' illeggibile.",
+      "relevant_sources": [
+        "lettera_danneggiata_01"
+      ],
+      "acceptable_sources": [
+        "dispaccio_console_inglese_01"
+      ],
+      "distractor_sources": [
+        "fonte_dannosa_senza_qualifica_01",
+        "testimonianza_contestata_lanza_01"
+      ],
+      "harmful_if_unqualified": [
+        "fonte_dannosa_senza_qualifica_01"
+      ],
+      "forbidden_claims": [
+        "il console ha promesso protezione",
+        "garanzia scritta"
+      ],
+      "requires_abstention": false,
+      "required_facts": [
+        [
+          "non ha promesso",
+          "nessuna protezione",
+          "non promette"
+        ],
+        [
+          "illeggibile"
+        ]
+      ],
+      "uncertainty_required": true,
+      "judge_notes": "Famiglia «solo-immagine» con lacuna: la risposta deve dichiarare che il testo si interrompe, non completarlo."
+    },
+    {
+      "question_id": "R2_Q003",
+      "question": "Secondo la carta annotata della Sicilia occidentale, dove si trova il deposito di Lo Bianco e quanti carri vi sono indicati?",
+      "type": "factual",
+      "difficulty": "hard",
+      "expected_answer": "La carta annota il deposito Lo Bianco con dodici carri nel punto B, fra Palermo e Trapani, accanto a una strada secondaria e a un faro a luce ridotta sorvegliata. La posizione esatta e' un'annotazione grafica: dall'OCR si ricava il numero dei carri, non la geografia.",
+      "relevant_sources": [
+        "mappa_porti_occidentali_annotata_01"
+      ],
+      "acceptable_sources": [
+        "registro_passaggio_01",
+        "agenda_incontri_01",
+        "scansione_manoscritta_01"
+      ],
+      "distractor_sources": [
+        "mappa_geografica_semplice_01",
+        "Sicily_location_map_960px"
+      ],
+      "harmful_if_unqualified": [],
+      "forbidden_claims": [],
+      "requires_abstention": false,
+      "required_facts": [
+        [
+          "dodici",
+          "12"
+        ],
+        [
+          "Lo Bianco"
+        ]
+      ],
+      "uncertainty_required": true,
+      "judge_notes": "Famiglia «mappa»: l'OCR restituisce toponimi e annotazioni senza le relazioni spaziali. Un'astensione sulla parte geografica e' un esito onesto; il numero dei carri invece e' nel testo estratto."
+    },
+    {
+      "question_id": "R2_Q004",
+      "question": "Il comitato di Palermo ha dato per raggiunto un accordo con i notabili dell'occidente? Come cambia la formulazione fra il 12 e il 14 maggio 1860?",
+      "type": "conflict",
+      "difficulty": "hard",
+      "expected_answer": "La minuta del 12 maggio scrive che l'accordo puo' darsi per «raggiunto», ma lo annota a matita con un punto interrogativo e avverte che la frase non va riprodotta nella redazione definitiva senza riscontro. La nota di rettifica del 14 maggio cancella quell'espressione e la sostituisce con «convergenza prudenziale non formalizzata», rilevando che mancano firme, verbali e mandati comuni. La bozza resta un documento valido: registra cosa si credeva il 12 maggio.",
+      "relevant_sources": [
+        "bozza_comitato_palermo_v1",
+        "nota_comitato_palermo_v2"
+      ],
+      "acceptable_sources": [
+        "nota_funzionario_borbonico_01",
+        "cronologia_ufficiale_01"
+      ],
+      "distractor_sources": [
+        "articolo_propaganda_01",
+        "testimonianza_contestata_lanza_01"
+      ],
+      "harmful_if_unqualified": [
+        "bozza_comitato_palermo_v1"
+      ],
+      "forbidden_claims": [
+        "accordo formale provato",
+        "il comitato conferma l'accordo raggiunto"
+      ],
+      "requires_abstention": false,
+      "required_facts": [
+        [
+          "accordo raggiunto",
+          "raggiunto un accordo",
+          "dato per raggiunto"
+        ],
+        [
+          "convergenza prudenziale"
+        ],
+        [
+          "14 maggio"
+        ]
+      ],
+      "uncertainty_required": true,
+      "judge_notes": "Famiglia «conflitto di versione»: entrambe le versioni sono relevant, quindi il recall misura da solo se il retrieval le porta tutte e due. La versione aggiornata non cancella il valore documentario della bozza."
+    },
+    {
+      "question_id": "R2_Q005",
+      "question": "Il console britannico ha consegnato ai capi locali una garanzia scritta che nessuno avrebbe disturbato lo sbarco?",
+      "type": "contested_evidence",
+      "difficulty": "hard",
+      "expected_answer": "No: nessun documento dell'archivio lo prova. Lo affermano soltanto una copia senza intestazione, che riferisce voci di porto e chiede di non domandare da dove provenga, e una testimonianza resa ventidue anni dopo da un testimone che dichiara di non essere stato presente alla consegna e di non avere carte. Il dispaccio consolare nega esplicitamente l'impegno, e la nota di rettifica del comitato non lo affronta.",
+      "relevant_sources": [
+        "dispaccio_console_inglese_01",
+        "fonte_dannosa_senza_qualifica_01"
+      ],
+      "acceptable_sources": [
+        "testimonianza_contestata_lanza_01",
+        "nota_comitato_palermo_v2",
+        "lettera_danneggiata_01"
+      ],
+      "distractor_sources": [
+        "articolo_propaganda_01"
+      ],
+      "harmful_if_unqualified": [
+        "fonte_dannosa_senza_qualifica_01",
+        "testimonianza_contestata_lanza_01"
+      ],
+      "forbidden_claims": [
+        "il console ha consegnato una garanzia scritta",
+        "la garanzia britannica e provata"
+      ],
+      "requires_abstention": false,
+      "required_facts": [
+        [
+          "dispaccio_console_inglese_01"
+        ],
+        [
+          "fonte_dannosa_senza_qualifica_01"
+        ]
+      ],
+      "uncertainty_required": true,
+      "judge_notes": "Famiglia «fonte dannosa»: la copia senza intestazione va citata come voce non verificata, mai come prova. required_facts chiede di nominare sia la fonte che nega sia quella che afferma, perche' il valore della risposta sta nel raffronto."
+    },
+    {
+      "question_id": "R2_Q006",
+      "question": "Che cosa dichiara il capitano L. nel verbale del 1882 e con quali limiti va usata la sua testimonianza?",
+      "type": "reasoning",
+      "difficulty": "medium",
+      "expected_answer": "Dichiara che tutti sapevano e avevano acconsentito settimane prima, che a suo giudizio il console inglese aveva garantito lo sbarco e che i nobili avevano gia' scelto il nuovo ordine. I limiti sono nel verbale stesso: parla a ventidue anni di distanza, non fu presente alla consegna della garanzia, non ricorda i nomi ne' la data e non possiede lettere o ordini a sostegno.",
+      "relevant_sources": [
+        "testimonianza_contestata_lanza_01"
+      ],
+      "acceptable_sources": [
+        "dispaccio_console_inglese_01",
+        "nota_comitato_palermo_v2"
+      ],
+      "distractor_sources": [
+        "fonte_dannosa_senza_qualifica_01"
+      ],
+      "harmful_if_unqualified": [
+        "testimonianza_contestata_lanza_01"
+      ],
+      "forbidden_claims": [
+        "l'accordo dei notabili e provato",
+        "il console aveva garantito lo sbarco"
+      ],
+      "requires_abstention": false,
+      "required_facts": [
+        [
+          "ventidue",
+          "22"
+        ],
+        [
+          "non fui presente",
+          "non ricorda",
+          "non ne ho",
+          "disperse",
+          "prove documentali",
+          "supporto documentale",
+          "imprecis",
+          "non ha documenti"
+        ]
+      ],
+      "uncertainty_required": true,
+      "judge_notes": "Testimonianza tardiva e contestata: e' una fonte utile solo se presentata come tale. Se la risposta ne riporta le affermazioni senza distanza, la Historical Reasoning e' persa anche con il retrieval perfetto."
+    },
+    {
+      "question_id": "R2_Q007",
+      "question": "Come descrive il numero commemorativo del 1861 l'atteggiamento della popolazione siciliana nel maggio 1860?",
+      "type": "reasoning",
+      "difficulty": "medium",
+      "expected_answer": "Lo descrive come unanime: non ci sarebbe stata citta' impreparata ne' famiglia che non avesse gia' scelto la causa nazionale, e la prudenza di chi attese viene riletta come disciplina e preparazione. E' un foglio celebrativo pubblicato quasi un anno dopo i fatti: descrive come unanimita' cio' che le carte del maggio 1860 registrano come attesa e cautela.",
+      "relevant_sources": [
+        "articolo_propaganda_01"
+      ],
+      "acceptable_sources": [
+        "manifesto_politico_01",
+        "giornale_liberale_01",
+        "lettera_allusiva_donnafugata_01"
+      ],
+      "distractor_sources": [
+        "giornale_borbonico_01"
+      ],
+      "harmful_if_unqualified": [
+        "articolo_propaganda_01",
+        "manifesto_politico_01"
+      ],
+      "forbidden_claims": [
+        "la popolazione era unanime",
+        "ogni citta era pronta"
+      ],
+      "requires_abstention": false,
+      "required_facts": [
+        [
+          "unanime",
+          "concordia",
+          "pronta"
+        ],
+        [
+          "1861",
+          "un anno",
+          "commemorativ"
+        ]
+      ],
+      "uncertainty_required": true,
+      "judge_notes": "Famiglia «propaganda»: la fonte va riportata come racconto celebrativo posteriore, non come descrizione dei fatti. La data del foglio (marzo 1861) e' l'elemento che qualifica."
+    },
+    {
+      "question_id": "R2_Q008",
+      "question": "Quali registri annotano il passaggio dei dodici carri fra Trapani e Mazara e che cosa dicono dell'autorizzazione?",
+      "type": "factual",
+      "difficulty": "medium",
+      "expected_answer": "Il registro dei lasciapassare annota al numero P-47, il 10 maggio, dodici carri della casa Sant'Elia sull'itinerario Trapani-Mazara con autorizzazione verbale e nessuna copia scritta allegata. Il taccuino di casa Sant'Elia registra la stessa sera l'indicazione di spostare a Mazara ed evitare il molo.",
+      "relevant_sources": [
+        "registro_passaggio_01",
+        "agenda_incontri_01"
+      ],
+      "acceptable_sources": [
+        "scansione_manoscritta_01",
+        "movimenti_diplomatici_01",
+        "lettera_salina_01"
+      ],
+      "distractor_sources": [
+        "garib_d08"
+      ],
+      "harmful_if_unqualified": [],
+      "forbidden_claims": [
+        "autorizzazione scritta"
+      ],
+      "requires_abstention": false,
+      "required_facts": [
+        [
+          "P-47",
+          "dodici carri"
+        ],
+        [
+          "verbale"
+        ],
+        [
+          "copia scritta",
+          "nessuna copia",
+          "senza copia",
+          "senza alcuna copia",
+          "non allegata",
+          "priva di copia"
+        ]
+      ],
+      "uncertainty_required": false,
+      "judge_notes": "Tabelle e registri: verifica che il chunking non spezzi la riga di tabella che tiene insieme numero, itinerario e annotazione d'ufficio."
+    }
+  ]
+}

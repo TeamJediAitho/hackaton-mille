@@ -1,5 +1,22 @@
 # Fase 2 — corpus completo (act 1-4): archivio ricco, casi difficili e hardening
 
+> **Stato: eseguito.** Step 0-7 completati; vedi `TEAM_NOTES.md` (Problemi 6-9 ed «Esperimenti della
+> Fase 2») per misure e decisioni. Scostamenti rispetto al piano, tutti documentati:
+>
+> * **Step 0** — il release pack ufficiale non era disponibile: le voci di manifest per act 3 e 4
+>   sono state scritte da noi e marcate `metadata_source: team_inferred`, sovrascrivibili da
+>   `install_release.py` appena il pack arriva.
+> * **Ordine degli esperimenti** — E4 è stato anticipato al posto di E3, perché `CohereReranker`
+>   richiede una chiave esterna e il piano prevedeva comunque un fallback lessicale: BM25 + RRF *è*
+>   quel fallback, in stdlib. Dopo E4 l'MRR sul corpus di gara è 1,000 e E3 non ha più un bersaglio.
+> * **Aggiunto E9** (chunk minimi e deduplicazione), non previsto: causa vera di un'astensione con
+>   recall 1,00.
+> * **E2 misurato e lasciato spento** (+0,013 di precision = rumore); **E6 misurato e scartato**;
+>   **E7 non eseguito** perché nessuna domanda del gold ne misura l'effetto; **E8 già soddisfatto**
+>   da E4 + E5.
+> * **Gate act 1+2 non superato sull'MRR** (0,821 contro 0,886): eccezione consapevole, la soglia
+>   non è stata riscritta.
+
 ## Context
 
 La definizione delle fasi nella `PARTICIPANT_GUIDE.md` era sbagliata. Quella corretta è:

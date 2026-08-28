@@ -1,0 +1,55 @@
+{
+  "round_id": "round_2",
+  "question_count": 8,
+  "question_source": "team (non ufficiale): domande scritte dal team sul corpus di Fase 2 (act 1-4) per esercitare le quattro famiglie difficili — solo-immagine, mappa, conflitto di versione, fonte dannosa. Le domande ufficiali arrivano dalla dashboard e sostituiscono questo file.",
+  "questions": [
+    {
+      "question_id": "R2_Q001",
+      "question": "Che cosa chiede il promemoria non firmato del 10 maggio riguardo ai dodici carri e alla luce del faro?",
+      "type": "factual",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "R2_Q002",
+      "question": "Che cosa dice la lettera danneggiata sulla protezione del console, e fin dove arriva il testo leggibile?",
+      "type": "factual",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "R2_Q003",
+      "question": "Secondo la carta annotata della Sicilia occidentale, dove si trova il deposito di Lo Bianco e quanti carri vi sono indicati?",
+      "type": "factual",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "R2_Q004",
+      "question": "Il comitato di Palermo ha dato per raggiunto un accordo con i notabili dell'occidente? Come cambia la formulazione fra il 12 e il 14 maggio 1860?",
+      "type": "conflict",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "R2_Q005",
+      "question": "Il console britannico ha consegnato ai capi locali una garanzia scritta che nessuno avrebbe disturbato lo sbarco?",
+      "type": "contested_evidence",
+      "difficulty": "hard"
+    },
+    {
+      "question_id": "R2_Q006",
+      "question": "Che cosa dichiara il capitano L. nel verbale del 1882 e con quali limiti va usata la sua testimonianza?",
+      "type": "reasoning",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "R2_Q007",
+      "question": "Come descrive il numero commemorativo del 1861 l'atteggiamento della popolazione siciliana nel maggio 1860?",
+      "type": "reasoning",
+      "difficulty": "medium"
+    },
+    {
+      "question_id": "R2_Q008",
+      "question": "Quali registri annotano il passaggio dei dodici carri fra Trapani e Mazara e che cosa dicono dell'autorizzazione?",
+      "type": "factual",
+      "difficulty": "medium"
+    }
+  ]
+}

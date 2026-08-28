@@ -24,6 +24,25 @@ from pathlib import Path
 # ("il dossier dice che le prove non bastano") verrebbe scambiata per un'astensione.
 ABSTENTION_MARKERS = ("non lo so", "non lo sappiamo", "non e possibile stabilirlo")
 
+# Dichiarare che le carte non provano una cosa vale quanto astenersi: la guida chiede di
+# «distinguere fatti, interpretazioni, conflitti e assenza di prova». A differenza di
+# ABSTENTION_MARKERS questi si cercano ovunque nella risposta, non solo in apertura, ma valgono
+# come astensione solo se la risposta non afferma nessuno dei `forbidden_claims`.
+INSUFFICIENCY_MARKERS = (
+    "non prova", "non provano", "non ci sono prove", "non vi sono prove", "nessuna prova",
+    "non dimostra", "non dimostrano", "non e provato", "non sono provate", "non e dimostrato",
+    "non risulta provato", "non e possibile stabilire", "manca la prova", "mancano prove",
+)
+
+# Una fonte elencata in `harmful_if_unqualified` puo' essere citata, ma va presentata per quello
+# che e'. Bastano formule come queste: la guida chiede che propaganda, bozze superate e
+# testimonianze contestate non passino per prova.
+QUALIFIERS = (
+    "propaganda", "di parte", "contestat", "bozza", "minuta", "non definitiv", "superat",
+    "tardiv", "non verificat", "non provat", "senza prova", "priva di firma", "senza firma",
+    "voce", "voci", "diceri", "allusiv", "cautela", "non e prova", "non costituisce prova",
+)
+
 # Fasce di SCORING_AND_FAIRNESS.md
 LATENCY_BANDS = ((4000, 7), (8000, 5), (15000, 3), (25000, 1))
 COST_BANDS = ((0.005, 8), (0.02, 6), (0.05, 3), (0.10, 1))
@@ -39,6 +58,11 @@ def normalize(text: str) -> str:
 def is_abstention(answer: str) -> bool:
     normalized = normalize(answer)
     return normalized.startswith(ABSTENTION_MARKERS)
+
+
+def declares_insufficiency(answer: str) -> bool:
+    normalized = normalize(answer)
+    return any(marker in normalized for marker in INSUFFICIENCY_MARKERS)
 
 
 def missing_facts(answer: str, required_facts: list[list[str]]) -> list[list[str]]:
@@ -82,6 +106,17 @@ def score_question(answer: dict, annotation: dict, in_scope: set[str] | None = N
     abstained = is_abstention(answer["answer"])
     absent = missing_facts(answer["answer"], annotation.get("required_facts", []))
 
+    normalized_answer = normalize(answer["answer"])
+    claimed = [c for c in annotation.get("forbidden_claims", []) if normalize(c) in normalized_answer]
+    # La fonte dannosa conta se la risposta la nomina o se e' finita nei contesti passati al
+    # generatore: in entrambi i casi ha influenzato la risposta. Un'astensione non afferma nulla,
+    # quindi non ha niente da qualificare se non nomina la fonte.
+    harmful = [
+        doc for doc in annotation.get("harmful_if_unqualified", [])
+        if normalize(doc) in normalized_answer or (doc in retrieved and not abstained)
+    ]
+    qualified = any(marker in normalized_answer for marker in QUALIFIERS) if harmful else None
+
     row = {
         "question_id": annotation["question_id"],
         "expects_abstention": expects_abstention,
@@ -93,18 +128,25 @@ def score_question(answer: dict, annotation: dict, in_scope: set[str] | None = N
         "rr": 1 / hit_ranks[0] if hit_ranks else 0.0,
         "first_rank": hit_ranks[0] if hit_ranks else None,
         "missing_facts": absent,
+        "declares_insufficiency": declares_insufficiency(answer["answer"]),
+        "forbidden_claims": claimed,
+        "harmful_sources": harmful,
+        "qualified": qualified,
     }
 
     if expects_abstention:
-        row["verdict"] = "OK" if abstained else "ABSTENTION_MISS"
+        satisfied = abstained or (row["declares_insufficiency"] and not claimed)
+        row["verdict"] = "OK" if satisfied else "ABSTENTION_MISS"
     elif not hit_ranks:
         row["verdict"] = "RETRIEVAL_FAIL"
-    elif abstained or absent:
+    elif abstained or absent or claimed:
         row["verdict"] = "GENERATION_FAIL"
     elif hit_ranks[0] > 2:
         row["verdict"] = "RANK_WEAK"
     else:
         row["verdict"] = "OK"
+    if row["verdict"] == "OK" and qualified is False:
+        row["verdict"] = "UNQUALIFIED_SOURCE"
     return row
 
 
@@ -117,6 +159,7 @@ def score_submission(payload: dict, annotations: dict, in_scope: set[str] | None
     ]
     scored = [row for row in rows if row["recall"] is not None]
     abstention = [row for row in rows if row["expects_abstention"]]
+    qualifiable = [row for row in rows if row["qualified"] is not None]
     latencies = [answer["telemetry"]["latency_ms"] for answer in payload["answers"]]
     costs = [answer["telemetry"]["declared_cost_eur"] for answer in payload["answers"]]
 
@@ -132,7 +175,15 @@ def score_submission(payload: dict, annotations: dict, in_scope: set[str] | None
         "hit@5": mean([float(row["hit"]) for row in scored]),
         "mrr": mean([row["rr"] for row in scored]),
         "dont_know_rate": mean([float(row["abstained"]) for row in abstention]) if abstention else None,
+        "insufficiency_rate": (
+            mean([float(row["abstained"] or (row["declares_insufficiency"] and not row["forbidden_claims"]))
+                  for row in abstention])
+            if abstention else None
+        ),
         "undue_abstentions": sum(1 for row in scored if row["abstained"]),
+        "qualification_rate": mean([float(row["qualified"]) for row in qualifiable]) if qualifiable else None,
+        "n_qualifiable": len(qualifiable),
+        "forbidden_claims": sum(1 for row in rows if row["forbidden_claims"]),
         "latency_mean_ms": mean(latencies),
         "latency_p95_ms": percentile(latencies, 0.95),
         "latency_max_ms": max(latencies) if latencies else 0,
@@ -150,10 +201,21 @@ def report(result: dict, baseline: dict | None = None) -> None:
         delta = f"   (prima {baseline[key]:.3f}, {result[key] - baseline[key]:+.3f})" if baseline else ""
         print(f"  {key:<12} {result[key]:.3f}{delta}")
 
-    print("\nASTENSIONE")
+    print("\nASTENSIONE E QUALIFICA DELLE FONTI")
     rate = result["dont_know_rate"]
+    qualification = result["qualification_rate"]
     print(f"  dont_know_rate        {'n/d' if rate is None else f'{rate:.3f}'}")
+    insufficiency = result["insufficiency_rate"]
+    print(
+        f"  assenza di prova      {'n/d' if insufficiency is None else f'{insufficiency:.3f}'}"
+        "   (formula esatta oppure «le carte non provano»)"
+    )
     print(f"  astensioni indebite   {result['undue_abstentions']}")
+    print(
+        f"  qualification_rate    {'n/d' if qualification is None else f'{qualification:.3f}'}"
+        f"  ({result['n_qualifiable']} domande con fonti da qualificare)"
+    )
+    print(f"  affermazioni vietate  {result['forbidden_claims']}")
 
     print("\nSISTEMA")
     latency_pts = band_points(result["latency_mean_ms"], LATENCY_BANDS)
@@ -174,11 +236,67 @@ def report(result: dict, baseline: dict | None = None) -> None:
         if row["missing_facts"]:
             notes.append("fatti mancanti: " + "; ".join("|".join(g) for g in row["missing_facts"]))
         if row["expects_abstention"]:
-            notes.append("astensione attesa: " + ("sì" if row["abstained"] else "NO"))
+            declared = row["abstained"] or (row["declares_insufficiency"] and not row["forbidden_claims"])
+            notes.append("astensione attesa: " + ("sì" if declared else "NO"))
+        if row["qualified"] is False:
+            notes.append("fonte non qualificata: " + ", ".join(row["harmful_sources"]))
+        if row["forbidden_claims"]:
+            notes.append("afferma: " + "; ".join(row["forbidden_claims"]))
         was = previous.get(row["question_id"])
         if was and was != row["verdict"]:
             notes.append(f"era {was}")
         print(f"  {row['question_id']:<8} {row['verdict']:<16} {recall} {row['precision']:5.2f} {rank}  {' / '.join(notes)}")
+
+
+def corpus_text(manifest: dict, document_ids: set[str]) -> dict[str, str]:
+    """Testo normalizzato dei documenti richiesti, riletto dalla cache di parsing.
+
+    Usa lo stesso parser e lo stesso splitter dell'ingest, quindi non chiama nessuna API e non
+    rifa' l'OCR: i file gia' parsati arrivano da `outputs/parse_cache/`.
+    """
+    from baseline_naive_rag import DIGITAL_MODALITIES, FORCE_OCR_ALL, build_parser, build_splitter, choose_primary
+
+    project_root = Path.cwd()
+    parsers = {False: build_parser(False), True: build_parser(True)}
+    splitter = build_splitter()
+    texts: dict[str, str] = {}
+    for document in manifest["documents"]:
+        if document["document_id"] not in document_ids:
+            continue
+        primary = choose_primary(document, project_root)
+        if primary is None:
+            continue
+        needs_ocr = FORCE_OCR_ALL or document.get("modality", "") not in DIGITAL_MODALITIES
+        chunks = splitter.split(parsers[needs_ocr].parse(str(primary)))
+        texts[document["document_id"]] = normalize("\n".join(chunk.text for chunk in chunks))
+    return texts
+
+
+def verify_contexts(payload: dict, manifest: dict) -> list[tuple[str, str, str]]:
+    """Contesti non riconducibili al documento dichiarato.
+
+    SCORING_AND_FAIRNESS.md: un contesto non supportato dal testo del suo `document_id` azzera la
+    Faithfulness di quella domanda. Qui il confronto e' lo stesso: testo normalizzato, sottostringa.
+    """
+    cited = {context["document_id"] for answer in payload["answers"] for context in answer["contexts"]}
+    known = {row["document_id"] for row in manifest["documents"]}
+    texts = corpus_text(manifest, cited & known)
+
+    problems: list[tuple[str, str, str]] = []
+    for answer in payload["answers"]:
+        for context in answer["contexts"]:
+            document_id = context["document_id"]
+            corpus = texts.get(document_id)
+            if corpus is None:
+                problems.append((answer["question_id"], document_id, "document_id assente dal manifest"))
+                continue
+            needle = normalize(context["content"])
+            if needle in corpus:
+                continue
+            words = needle.split()
+            covered = sum(1 for word in words if word in corpus) / len(words) if words else 0.0
+            problems.append((answer["question_id"], document_id, f"supporto testuale {covered:.0%}"))
+    return problems
 
 
 def in_scope_documents(manifest_path: Path | None, acts: list[int] | None) -> set[str] | None:
@@ -195,16 +313,31 @@ def main() -> int:
     parser.add_argument("--baseline", type=Path, help="Submission precedente, per il confronto prima/dopo")
     parser.add_argument("--manifest", type=Path, default=Path("data/manifest.json"))
     parser.add_argument("--act", type=int, nargs="+", help="Limita le fonti attese agli act indicati")
+    parser.add_argument(
+        "--verify-contexts",
+        action="store_true",
+        help="Verifica che ogni contesto sia rintracciabile nel testo del suo document_id",
+    )
     args = parser.parse_args()
 
     annotations = json.loads(args.annotations.read_text(encoding="utf-8"))
+    payload = json.loads(args.submission.read_text(encoding="utf-8"))
     scope = in_scope_documents(args.manifest, args.act)
-    result = score_submission(json.loads(args.submission.read_text(encoding="utf-8")), annotations, scope)
+    result = score_submission(payload, annotations, scope)
     baseline = None
     if args.baseline:
         baseline = score_submission(json.loads(args.baseline.read_text(encoding="utf-8")), annotations, scope)
         print(f"Confronto con {args.baseline}\n")
     report(result, baseline)
+
+    if args.verify_contexts:
+        manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
+        problems = verify_contexts(payload, manifest)
+        print("\nSUPPORTO TESTUALE DEI CONTESTI")
+        for question_id, document_id, reason in problems:
+            print(f"  {question_id:<8} {document_id:<40} {reason}")
+        print(f"  {len(problems)} contesti non tracciabili")
+        return 1 if problems else 0
     return 0
 
 
