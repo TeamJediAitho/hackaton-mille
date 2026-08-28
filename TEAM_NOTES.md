@@ -2,9 +2,9 @@
 
 ## Problema 1
 
-- **Problema:** Qual era il problema?
-- **Com'è stato risolto:** Come lo avete risolto?
-- **Cosa ho imparato:** Che cosa vi portate dietro da questa esperienza?
+- **Problema:** Il tempo della prima ingestion con Doclings risultano enormi, soprattutto per documenti scannerizzati e non digitali.
+- **Com'è stato risolto:** Non è stato risolto, ma discusso internamente.
+- **Cosa ho imparato:** In funzione dell'ambiente e delle risorse a disposizione può essere utile usare servizi esterni o librerie di parsing più coerenti.
 
 ---
 
