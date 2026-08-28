@@ -84,25 +84,6 @@ Hard rules:
 * Abstention is a valid, rewarded answer when the evidence is thin.
 * `.env` holds the API key — it is gitignored, keep it out of commits and out of any output.
 
-## Prior art — the `corso-datapizza` skill
-
-Before implementing a RAG technique from scratch, invoke the **`corso-datapizza`** skill
-(`.claude/skills/corso-datapizza/`). It navigates the AITHO/Datapizza course archive, which is built
-on the *same stack as this repo* and already has runnable, measured solutions for most of what this
-hackathon asks:
-
-* chunking strategies, hybrid search / BM25+RRF, reranking, query rewrite, HyDE, parent-child,
-  RAPTOR;
-* Docling parsing, OCR and multimodal PDFs (the `garib_*` scans and the map);
-* Qdrant payload filtering — index `act`, `reliability`, `modality` as payload and filter on them;
-* eval harnesses: recall@k, MRR, hit@k, RAGAS faithfulness, LLM-as-judge calibration,
-  don't-know rate, gold datasets;
-* cost/latency telemetry, caching, tracing, Streamlit demos.
-
-The skill's routing table maps a problem to the exact file; `references/rag-playbook.md` carries the
-ported code patterns and the course's measured results. The archive is in Italian. **Do not
-re-derive what the course already solved**, and never copy the archive's `.env` files into this repo.
-
 ## Core Principles
 
 * Before modifying code, understand the project structure and existing conventions.
