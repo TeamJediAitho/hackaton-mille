@@ -25,7 +25,9 @@ import math
 import os
 import re
 import shutil
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 import unicodedata
 from collections import Counter
 from pathlib import Path
@@ -228,9 +230,19 @@ FETCH_K = int(os.getenv("FETCH_K", "15"))
 HYBRID = os.getenv("HYBRID", "1") == "1"
 # E2: 0 = consegna sempre k contesti; >0 = taglia sotto questa frazione del punteggio fuso migliore.
 TRIM_RATIO = float(os.getenv("TRIM_RATIO", "0"))
+# E10: quanti chunk al massimo puo' occupare uno stesso documento nei contesti finali.
+# 0 = nessun limite. Le domande cross-document hanno cinque slot per due o tre fonti: un
+# documento lungo e rumoroso (garib_d05, garib_d08) puo' prenderseli quasi tutti.
+MAX_PER_DOC = int(os.getenv("MAX_PER_DOC", "2"))
 # Sotto questa soglia di caratteri indicizzati un documento e' muto: e' entrato nell'indice ma non
 # puo' rispondere a niente (tipico delle immagini senza testo, es. una mappa senza annotazioni).
 MUTE_DOCUMENT_CHARS = 40
+# L'ingest e' dominato dal parsing Docling (l'OCR delle scansioni): i file vengono
+# processati in parallelo con un worker per thread. Ogni worker tiene le proprie
+# pipeline (il DocumentConverter di Docling non e' thread-safe). Le scritture su
+# Qdrant restano sul thread main per evitare upsert concorrenti sul client locale.
+# INGEST_WORKERS=1 ripristina l'esecuzione sequenziale, utile per gli A/B.
+INGEST_WORKERS = int(os.getenv("INGEST_WORKERS", "4"))
 
 # E5: `reliability` del manifest tradotta in una qualifica leggibile dal generatore. Il modello non
 # sa da solo che «articolo_propaganda_01» e' un foglio celebrativo o che una bozza e' stata
@@ -374,33 +386,42 @@ def ingest_corpus(
     )
 
 
-    def pipeline(ocr: bool):
+    def build_ingest_pipeline(ocr: bool):
         return IngestionPipeline(
             modules=[
                 build_parser(ocr),
                 build_splitter(),
                 ChunkEmbedder(client=embedder, embedding_name=EMB_NAME),
             ],
-            vector_store=vector_store,
-            collection_name=collection,
         )
 
-    ingestion = {False: pipeline(False), True: pipeline(True)}
+    workers = min(INGEST_WORKERS, len(files), os.cpu_count() or 1)
+    local = threading.local()
+    started = time.perf_counter()
+
+    def ingest_one(path: Path, document: dict):
+        needs_ocr = FORCE_OCR_ALL or document.get("modality", "") not in DIGITAL_MODALITIES
+        pipelines = getattr(local, "pipelines", None)
+        if pipelines is None:
+            pipelines = local.pipelines = {}
+        if needs_ocr not in pipelines:
+            pipelines[needs_ocr] = build_ingest_pipeline(needs_ocr)
+        return needs_ocr, pipelines[needs_ocr].run(file_path=str(path))
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [pool.submit(ingest_one, path, document) for path, document in files]
+        results = [future.result() for future in futures]
+
     # Conteggio per documento: un documento solo-immagine puo' entrare nell'indice senza testo
     # utile e sparire in silenzio. La guida chiede di distinguere «il testo non e' stato
-    # recuperato» da «recuperato ma interpretato male»: questo separa il primo caso.
-    def totals() -> tuple[int, int]:
-        dump = list(vector_store.dump_collection(collection))
-        return len(dump), sum(len((getattr(chunk, "text", None) or "").strip()) for chunk in dump)
-
-    n_chunk, n_char = 0, 0
+    # recuperato» da «recuperato ma interpretato male»: questo separa il primo caso. Con l'ingest
+    # parallelo i chunk sono gia' in mano al chiamante: il conteggio non costa piu' una rilettura.
+    all_chunks = []
     mute: list[str] = []
-    for path, document in files:
+    for (path, document), (needs_ocr, chunks) in zip(files, results, strict=True):
         document_id = document["document_id"]
-        needs_ocr = FORCE_OCR_ALL or document.get("modality", "") not in DIGITAL_MODALITIES
-        ingestion[needs_ocr].run(
-            file_path=str(path),
-            metadata={
+        for chunk in chunks:
+            chunk.metadata.update({
                 "document_id": document_id,
                 "source_file": path.name,
                 # E5: la qualifica della fonte viaggia col chunk e arriva al prompt.
@@ -408,20 +429,22 @@ def ingest_corpus(
                 "title": document.get("title", ""),
                 "reliability": document.get("reliability", "unknown"),
                 "qualifica": RELIABILITY_LABELS.get(document.get("reliability", ""), "fonte non classificata"),
-            },
-        )
-        chunks, chars = totals()
-        added, added_chars = chunks - n_chunk, chars - n_char
-        n_chunk, n_char = chunks, chars
-        if added_chars < MUTE_DOCUMENT_CHARS:
+            })
+        chars = sum(len((getattr(chunk, "text", None) or "").strip()) for chunk in chunks)
+        if chars < MUTE_DOCUMENT_CHARS:
             mute.append(document_id)
+        all_chunks.extend(chunks)
         print(
             f"ingest: {document_id} <- {path.name} (ocr={'on' if needs_ocr else 'off'})"
-            f" -> {added} chunk, {added_chars} caratteri"
+            f" -> {len(chunks)} chunk, {chars} caratteri"
         )
     if mute:
         print(f"ATTENZIONE: {len(mute)} documenti sono entrati senza testo utile: {', '.join(mute)}")
-    print(f"Ingest completato: {n_chunk} chunk in '{collection}'")
+    if all_chunks:
+        vector_store.add(all_chunks, collection)
+    elapsed = time.perf_counter() - started
+    n_chunk = len(list(vector_store.dump_collection(collection)))
+    print(f"Ingest completato in {elapsed:.1f}s: {n_chunk} chunk in '{collection}' ({workers} worker)")
     return vector_store
 
 
@@ -474,13 +497,30 @@ def _tokens(text: str) -> list[str]:
     return re.findall(r"[a-z0-9]+", unicodedata.normalize("NFKD", text.lower()))
 
 
+def _lexical_text(chunk: Any) -> str:
+    """Testo che il solo BM25 indicizza: contenuto + titolo + qualifica della fonte.
+
+    E11: una domanda come «confrontando i tre testi propagandistici» non ha nessuna parola in
+    comune con i fogli che cerca — «propaganda» sta nel manifest, non nel documento. Titolo e
+    qualifica entrano quindi nell'indice lessicale. **Il testo consegnato al generatore non
+    cambia**: i contesti restano il `chunk.text` originale, tracciabile nel corpus.
+    """
+    metadata = getattr(chunk, "metadata", None)
+    return " ".join([
+        getattr(chunk, "text", "") or "",
+        _meta_get(metadata, "title"),
+        _meta_get(metadata, "qualifica"),
+        _meta_get(metadata, "reliability"),
+    ])
+
+
 class Bm25:
     """BM25 Okapi su tutti i chunk della collection. Nessuna API, nessuna dipendenza nuova."""
 
     def __init__(self, chunks: list[Any], k1: float = 1.5, b: float = 0.75):
         self.chunks = chunks
         self.k1, self.b = k1, b
-        self.docs = [_tokens(getattr(chunk, "text", "") or "") for chunk in chunks]
+        self.docs = [_tokens(_lexical_text(chunk)) for chunk in chunks]
         self.lengths = [len(doc) for doc in self.docs]
         self.avg_length = (sum(self.lengths) / len(self.docs)) if self.docs else 0.0
         self.frequencies = [Counter(doc) for doc in self.docs]
@@ -520,7 +560,18 @@ def reciprocal_rank_fusion(rankings: list[list[Any]], k: int, constant: int = 60
             key = (_meta_get(getattr(chunk, "metadata", None), "document_id"), getattr(chunk, "text", ""))
             scores[key] = scores.get(key, 0.0) + 1 / (constant + rank)
             chunks.setdefault(key, chunk)
-    ordered = sorted(scores, key=lambda key: -scores[key])[:k]
+    ordered = sorted(scores, key=lambda key: -scores[key])
+    if MAX_PER_DOC:
+        seen: dict[str, int] = {}
+        capped = []
+        for key in ordered:
+            document_id = key[0]
+            if seen.get(document_id, 0) >= MAX_PER_DOC:
+                continue
+            seen[document_id] = seen.get(document_id, 0) + 1
+            capped.append(key)
+        ordered = capped
+    ordered = ordered[:k]
     if TRIM_RATIO and ordered:
         floor = scores[ordered[0]] * TRIM_RATIO
         ordered = [key for key in ordered if scores[key] >= floor]

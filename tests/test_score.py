@@ -181,3 +181,27 @@ def test_a_reasoned_negative_counts_as_declaring_the_absence_of_proof():
     assert verdicts == {"Q1": "OK", "Q2": "ABSTENTION_MISS"}
     assert result["dont_know_rate"] == 0.0  # nessuna delle due usa la formula esatta
     assert result["insufficiency_rate"] == pytest.approx(0.5)
+
+
+def test_a_forbidden_claim_quoted_to_deny_it_is_not_an_assertion():
+    """«L'archivio non dimostra che X» non afferma X: caso reale R2_Q008."""
+    submission = {
+        "schema_version": "1.0",
+        "round_id": "test",
+        "answers": [
+            answer("Q1", "L'archivio non dimostra che la marina britannica garanti lo sbarco.", ["d1"]),
+            answer("Q2", "La marina britannica garanti lo sbarco, come si legge ovunque.", ["d1"]),
+        ],
+    }
+    forbidden = {"forbidden_claims": ["la marina britannica garanti"]}
+    annotations = {
+        "round_id": "test",
+        "questions": [
+            annotation("Q1", [], requires_abstention=True) | forbidden,
+            annotation("Q2", [], requires_abstention=True) | forbidden,
+        ],
+    }
+    result = score_submission(submission, annotations)
+    verdicts = {row["question_id"]: row["verdict"] for row in result["rows"]}
+    assert verdicts == {"Q1": "OK", "Q2": "ABSTENTION_MISS"}
+    assert result["forbidden_claims"] == 1

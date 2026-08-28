@@ -32,6 +32,7 @@ INSUFFICIENCY_MARKERS = (
     "non prova", "non provano", "non ci sono prove", "non vi sono prove", "nessuna prova",
     "non dimostra", "non dimostrano", "non e provato", "non sono provate", "non e dimostrato",
     "non risulta provato", "non e possibile stabilire", "manca la prova", "mancano prove",
+    "non fornisce prove", "non e supportat", "non consente di affermare", "non autorizza a",
 )
 
 # Una fonte elencata in `harmful_if_unqualified` puo' essere citata, ma va presentata per quello
@@ -63,6 +64,28 @@ def is_abstention(answer: str) -> bool:
 def declares_insufficiency(answer: str) -> bool:
     normalized = normalize(answer)
     return any(marker in normalized for marker in INSUFFICIENCY_MARKERS)
+
+
+# Un `forbidden_claim` cercato come sottostringa scatta anche quando la risposta lo *nega*
+# («l'archivio non dimostra che la marina britannica garanti...»), cioe' proprio quando la risposta
+# e' corretta. Una negazione entro questa finestra prima del claim lo disinnesca.
+NEGATIONS = ("non ", "nessun", "senza ", "nega", "smentisc", "esclud", "priva di", "manca")
+# La negazione vale solo dentro la stessa proposizione: «non provano nulla, ma X e provato»
+# afferma X, e il «non» della proposizione precedente non deve disinnescarlo.
+CLAUSE_BREAKS = (".", ";", ":", ",", " ma ", " tuttavia ", " invece ", " mentre ", " pero ")
+
+
+def asserts_claim(normalized_answer: str, claim: str) -> bool:
+    """La risposta afferma il claim, o lo cita per negarlo?"""
+    needle = normalize(claim)
+    start = normalized_answer.find(needle)
+    while start != -1:
+        before = normalized_answer[:start]
+        cut = max((before.rfind(sep) + len(sep) for sep in CLAUSE_BREAKS if sep in before), default=0)
+        if not any(marker in before[cut:] for marker in NEGATIONS):
+            return True
+        start = normalized_answer.find(needle, start + 1)
+    return False
 
 
 def missing_facts(answer: str, required_facts: list[list[str]]) -> list[list[str]]:
@@ -107,7 +130,7 @@ def score_question(answer: dict, annotation: dict, in_scope: set[str] | None = N
     absent = missing_facts(answer["answer"], annotation.get("required_facts", []))
 
     normalized_answer = normalize(answer["answer"])
-    claimed = [c for c in annotation.get("forbidden_claims", []) if normalize(c) in normalized_answer]
+    claimed = [c for c in annotation.get("forbidden_claims", []) if asserts_claim(normalized_answer, c)]
     # La fonte dannosa conta se la risposta la nomina o se e' finita nei contesti passati al
     # generatore: in entrambi i casi ha influenzato la risposta. Un'astensione non afferma nulla,
     # quindi non ha niente da qualificare se non nomina la fonte.

@@ -3,8 +3,23 @@
 ## Problema 1
 
 - **Problema:** Il tempo della prima ingestion con Docling risulta enorme, soprattutto per documenti scannerizzati e non digitali. Docling gira in locale ed è molto lento: worst case di ingestion misurato a 37,18 s.
-- **Com'è stato risolto:** Non è stato risolto, ma discusso internamente.
-- **Cosa ho imparato:** In funzione dell'ambiente e delle risorse a disposizione può essere utile sostituire Docling con una soluzione non locale, ad es. le API di parsing/OCR di OpenAI, o usare librerie di parsing più coerenti. Utilizzando ad esempio una pipeline di check del file (se scanned o digital) potrebbe essere utile utilizzare OCR solo sui documenti scansionati. Un'altra idea potrebbe essere parallelizzare il parsing. Tesseract è spesso più veloce. NOTA: le impostazioni sulla lingua potrebbero migliorare la qualità.
+- **Com'è stato risolto:** l'ingest processava i file in sequenza, uno alla volta (`ingest_corpus`). Ora i file vengono parssati in parallelo con un `ThreadPoolExecutor`: ogni worker tiene le proprie pipeline (il `DocumentConverter` di Docling non è thread-safe, quindi ogni thread ha il suo parser con/senza OCR), mentre le scritture su Qdrant restano sul thread main per evitare upsert concorrenti sul client locale. La concorrenza è `INGEST_WORKERS` (default 4, cap al numero di file e core); `INGEST_WORKERS=1` ripristina esattamente il comportamento sequenziale, utile per gli A/B.
+- **Cosa ho imparato:** la parallelizzazione è gratis—zero dipendenze, cache di parsing invariata (chiave sempre sha256+engine), contratti intatti. Il guadagno reale dipende da quanti file pesanti ci sono nel lotto: su act 1 (6 file, 2 con OCR) il parse fresco passa da 151,0 s a 105,9 s (-30%); su un lotto con più scansioni il beneficio è più marcato. Il collo di bottiglia resta il documento più lento del pool (garib_d08, 5,2 MB, da solo oltre i 4 minuti di OCR fresco): per quello la leva giusta è cambiare engine OCR (vedi sotto).
+
+### Misurazione (act 1, parse fresco senza cache)
+
+```bash
+# cache spostata via, entrambe le run con --rebuild --act 1
+INGEST_WORKERS=1 python baseline_naive_rag.py --questions <q> --round-id timing --output /tmp/seq.json --rebuild --act 1
+INGEST_WORKERS=4 python baseline_naive_rag.py --questions <q> --round-id timing --output /tmp/par.json --rebuild --act 1
+```
+
+| Config | Tempo ingest | Lettura |
+| --- | --- | --- |
+| sequenziale (1 worker) | 151,0 s | baseline |
+| **parallelo (4 worker)** | **105,9 s** | -30%, 6 file di cui 2 OCR |
+
+**Prossimi passi aperti:** Tesseract al posto di EasyOCR (il repo Docling supporta `OCREngine.TESSERACT`, ma servono il wheel `tesserocr` self-contained e i tessdata `ita`/`eng`/`osd` via `TESSDATA_PREFIX`): sbloccherebbe il collo di bottiglia *per documento* e si combina con la parallelizzazione. Inoltre la latenza di parsing dipende fortemente dalla macchina: 37,18 s misurati all'inizio non valgono per garib_d08, che da solo supera i 4 minuti di OCR fresco.
 
 ---
 
