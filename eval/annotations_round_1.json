@@ -1,0 +1,154 @@
+{
+  "round_id": "round_1",
+  "annotation_source": "team (non ufficiale): etichette scritte dal team leggendo il testo estratto dai documenti del manifest, per misurare il retrieval in locale. Non provengono dalla piattaforma.",
+  "questions": [
+    {
+      "question_id": "R1_Q001",
+      "question": "Secondo la cronologia ufficiale, in quale data e in quale luogo avviene lo sbarco?",
+      "type": "factual",
+      "difficulty": "easy",
+      "expected_answer": "L'11 maggio 1860 a Marsala.",
+      "relevant_sources": ["cronologia_ufficiale_01"],
+      "acceptable_sources": [],
+      "distractor_sources": ["garib_d09", "giornale_liberale_01", "nota_funzionario_borbonico_01"],
+      "harmful_if_unqualified": [],
+      "forbidden_claims": [],
+      "requires_abstention": false,
+      "required_facts": [["11 maggio"], ["marsala"]],
+      "uncertainty_required": false,
+      "judge_notes": "garib_d09 e' un distrattore semantico: parla di Marsala ma nel 1862."
+    },
+    {
+      "question_id": "R1_Q002",
+      "question": "Quali quattro categorie usa il dossier per classificare il peso delle evidenze?",
+      "type": "factual",
+      "difficulty": "easy",
+      "expected_answer": "Prova diretta, indizio, congettura, fonte contestata.",
+      "relevant_sources": ["dossier_introduttivo_01"],
+      "acceptable_sources": [],
+      "distractor_sources": ["elenco_personaggi_01", "giornale_borbonico_01"],
+      "harmful_if_unqualified": [],
+      "forbidden_claims": [],
+      "requires_abstention": false,
+      "required_facts": [["prova diretta"], ["indizio"], ["congettura"], ["contestata"]],
+      "uncertainty_required": false,
+      "judge_notes": "Le quattro qualificazioni stanno in sezioni diverse dello stesso documento: servono almeno due chunk per coprirle tutte."
+    },
+    {
+      "question_id": "R1_Q003",
+      "question": "Quali preparativi concreti chiede il principe Salina e con quali cautele?",
+      "type": "factual",
+      "difficulty": "easy",
+      "expected_answer": "Dodici carri con uomini avvezzi alla strada e due granai sgombri, col pretesto della raccolta anticipata; senza promettere nulla a nessuno, ne' a voce ne' con una riga firmata.",
+      "relevant_sources": ["lettera_salina_01"],
+      "acceptable_sources": ["lettera_tancredi_01"],
+      "distractor_sources": ["elenco_personaggi_01", "dispaccio_console_inglese_01"],
+      "harmful_if_unqualified": [],
+      "forbidden_claims": ["accordo formale fra i notabili"],
+      "requires_abstention": false,
+      "required_facts": [
+        ["dodici", "12"],
+        ["carri"],
+        ["granai"],
+        ["non si prometta", "non promettere", "nulla a nessuno", "firmata", "pretesto", "ordinaria amministrazione"]
+      ],
+      "uncertainty_required": false,
+      "judge_notes": "Il numero 'dodici carri' e' letterale nella lettera: una risposta che lo omette e' incompleta, non falsa."
+    },
+    {
+      "question_id": "R1_Q004",
+      "question": "Che cosa afferma e che cosa nega il dispaccio del console britannico riguardo alla presenza inglese?",
+      "type": "factual",
+      "difficulty": "medium",
+      "expected_answer": "Afferma che navi britanniche sono in rada per affari di commercio e che la loro presenza e' stata notata; nega di aver dato ordini di protezione a favore di forze irregolari o garanzie di intervento, e ogni impegno politico.",
+      "relevant_sources": ["dispaccio_console_inglese_01"],
+      "acceptable_sources": [],
+      "distractor_sources": ["garib_d05", "lettera_salina_01"],
+      "harmful_if_unqualified": [],
+      "forbidden_claims": ["appoggio britannico allo sbarco"],
+      "requires_abstention": false,
+      "required_facts": [
+        ["commercio", "mercantile", "commerciale"],
+        ["impegno politico", "protezione", "garanzia", "intervento"]
+      ],
+      "uncertainty_required": false,
+      "judge_notes": "Il dispaccio distingue esplicitamente presenza, impressione prodotta e impegni assunti: la terza 'non sussiste'."
+    },
+    {
+      "question_id": "R1_Q005",
+      "question": "In che modo i due giornali descrivono diversamente il consenso popolare?",
+      "type": "contradiction",
+      "difficulty": "medium",
+      "expected_answer": "Il foglio liberale descrive un consenso gia' maturo (il popolo vede fratelli, l'Isola attendeva); il foglio borbonico descrive una popolazione pacifica intimorita e avverte di non confondere il timore con l'adesione.",
+      "relevant_sources": ["giornale_liberale_01", "giornale_borbonico_01"],
+      "acceptable_sources": [],
+      "distractor_sources": [],
+      "harmful_if_unqualified": ["giornale_liberale_01", "giornale_borbonico_01"],
+      "forbidden_claims": [],
+      "requires_abstention": false,
+      "required_facts": [
+        ["timore", "ripugnanza", "paura"],
+        ["consenso", "fratelli", "entusiasmo", "adesione", "attendeva"]
+      ],
+      "uncertainty_required": false,
+      "judge_notes": "Servono entrambe le fonti: e' l'unica domanda del round con recall su due documenti. Sono entrambe propaganda e vanno qualificate come tali."
+    },
+    {
+      "question_id": "R1_Q006",
+      "question": "Quali anomalie osserva il funzionario borbonico e quale accusa evita di formulare?",
+      "type": "factual",
+      "difficulty": "medium",
+      "expected_answer": "Ordini alle pattuglie non concordi e non protocollati, due pattuglie spostate senza autorizzazione scritta, tre cancelli di servizio rimasti aperti e carri riuniti in numero superiore al consueto; evita di accusare i notabili della provincia di collusione perche' non dispone di elementi sufficienti.",
+      "relevant_sources": ["nota_funzionario_borbonico_01"],
+      "acceptable_sources": [],
+      "distractor_sources": ["giornale_borbonico_01", "elenco_personaggi_01"],
+      "harmful_if_unqualified": [],
+      "forbidden_claims": ["collusione provata dei notabili"],
+      "requires_abstention": false,
+      "required_facts": [
+        ["carri"],
+        ["cancelli", "pattuglie", "ordini"],
+        ["collusione", "accusare", "accusa"]
+      ],
+      "uncertainty_required": false,
+      "judge_notes": "giornale_borbonico_01 parla degli stessi temi (carri, voci) ma non contiene le anomalie del porto: e' il distrattore che nella baseline finisce al rank 1."
+    },
+    {
+      "question_id": "R1_Q007",
+      "question": "Le fonti di Act 1-2 provano un accordo formale dei notabili prima dello sbarco?",
+      "type": "insufficient_evidence",
+      "difficulty": "medium",
+      "expected_answer": "No. Nessuna carta dell'archivio prova un accordo formale: la cronologia avverte di non leggervi dichiarazioni su accordi fra privati, il funzionario dichiara di non avere elementi sufficienti e il foglio borbonico osserva che finche' mancano nomi e carte le voci restano voci.",
+      "relevant_sources": [],
+      "acceptable_sources": [
+        "cronologia_ufficiale_01",
+        "nota_funzionario_borbonico_01",
+        "giornale_borbonico_01",
+        "dossier_introduttivo_01"
+      ],
+      "distractor_sources": ["giornale_liberale_01"],
+      "harmful_if_unqualified": ["giornale_liberale_01"],
+      "forbidden_claims": ["accordo formale provato", "patto sottoscritto dai notabili"],
+      "requires_abstention": true,
+      "required_facts": [],
+      "uncertainty_required": true,
+      "judge_notes": "Domanda di astensione: la risposta corretta dichiara che le prove non bastano. Nessun relevant_source, quindi e' esclusa da recall e MRR e conta nel dont_know_rate."
+    },
+    {
+      "question_id": "R1_Q008",
+      "question": "Quali indizi, letti insieme, suggeriscono una preparazione precedente all’arrivo pubblico dei volontari?",
+      "type": "cross_document",
+      "difficulty": "hard",
+      "expected_answer": "I dodici carri e i due granai sgombri chiesti da Salina l'8 maggio, i carri spostati su Mazara nella lettera di Tancredi del 10 maggio, e le anomalie del porto registrate dal funzionario (carri in numero superiore, cancelli aperti, pattuglie spostate). Sono indizi convergenti, non una prova di accordo.",
+      "relevant_sources": ["lettera_salina_01", "nota_funzionario_borbonico_01", "lettera_tancredi_01"],
+      "acceptable_sources": ["giornale_liberale_01", "dispaccio_console_inglese_01"],
+      "distractor_sources": [],
+      "harmful_if_unqualified": ["giornale_liberale_01"],
+      "forbidden_claims": ["accordo formale provato"],
+      "requires_abstention": false,
+      "required_facts": [["carri"], ["granai", "magazzini"]],
+      "uncertainty_required": true,
+      "judge_notes": "Multi-hop: tre documenti su cinque slot. La risposta deve restare al livello di indizio (definizione del dossier), non di prova."
+    }
+  ]
+}

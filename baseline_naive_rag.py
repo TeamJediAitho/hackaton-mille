@@ -19,6 +19,7 @@ Esempio:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shutil
@@ -178,14 +179,24 @@ def choose_primary(document: dict, project_root: Path) -> Path | None:
     return candidates[0]
 
 
-def iter_ingest_files(manifest: dict, project_root: Path) -> list[tuple[Path, str]]:
-    rows: list[tuple[Path, str]] = []
+def iter_ingest_files(
+    manifest: dict,
+    project_root: Path,
+    acts: list[int] | None = None,
+) -> list[tuple[Path, str, str]]:
+    """File da ingerire, con la modality dichiarata nel manifest.
+
+    `acts=None` (default) = tutto il manifest.
+    """
+    rows: list[tuple[Path, str, str]] = []
     for document in manifest["documents"]:
+        if acts and document.get("act") not in acts:
+            continue
         primary = choose_primary(document, project_root)
         if primary is None:
             print(f"skip (nessun file): {document['document_id']}")
             continue
-        rows.append((primary, document["document_id"]))
+        rows.append((primary, document["document_id"], document.get("modality", "")))
     return rows
 
 
@@ -197,6 +208,69 @@ def iter_ingest_files(manifest: dict, project_root: Path) -> list[tuple[Path, st
 EMB_NAME = "content_embedding"
 EMBEDDING_MODEL = "text-embedding-3-small"
 EMBEDDING_DIM = 1536
+PARSE_CACHE = Path(os.getenv("PARSE_CACHE_PATH", "outputs/parse_cache"))
+# Modality del manifest che corrispondono a PDF nativi digitali: hanno gia' un layer di testo
+# pulito e l'OCR full-page lo peggiora (i->1, o->0, virgole->punto e virgola).
+DIGITAL_MODALITIES = {"text", "table"}
+# FORCE_OCR_ALL=1 riporta l'ingest al comportamento originale (OCR su tutto): serve per gli A/B
+# sul parsing senza toccare il codice.
+FORCE_OCR_ALL = os.getenv("FORCE_OCR_ALL") == "1"
+CHUNK_MAX_CHAR = int(os.getenv("CHUNK_MAX_CHAR", "1024"))
+CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "128"))
+
+
+def build_splitter():
+    """RecursiveSplitter che rispetta davvero max_char.
+
+    RecursiveSplitter raggruppa le foglie del nodo Docling, ma una foglia piu' grande di max_char
+    passa intera (lo dice il suo stesso test: max_char=10 su 21 caratteri -> 1 chunk). In questo
+    archivio il corpo di un documento e' spesso una foglia sola, quindi il limite non agiva mai e
+    ogni documento finiva in un unico vettore diluito. Qui le eccedenze vengono ritagliate con
+    TextSplitter, che e' gia' nella libreria.
+    """
+    from datapizza.modules.splitters import RecursiveSplitter, TextSplitter
+
+    class SizedSplitter(RecursiveSplitter):
+        def split(self, node):
+            text_splitter = TextSplitter(max_char=self.max_char, overlap=self.overlap)
+            chunks = []
+            for chunk in super().split(node):
+                if len(chunk.text) <= self.max_char:
+                    chunks.append(chunk)
+                    continue
+                for piece in text_splitter.split(chunk.text):
+                    piece.metadata.update(chunk.metadata)
+                    chunks.append(piece)
+            return chunks
+
+    return SizedSplitter(max_char=CHUNK_MAX_CHAR, overlap=CHUNK_OVERLAP)
+
+
+def build_parser(ocr: bool):
+    """DoclingParser che parsa ogni file una volta sola.
+
+    Docling e' lo stadio lento dell'ingest (OCR): senza cache ogni --rebuild
+    riprocessa l'intero archivio e un confronto A/B costa decine di minuti.
+    Chiave = sha256(file) + engine OCR, cosi' cambiare engine non riusa un
+    parsing prodotto da un altro. Import locale come nel resto del file.
+    """
+    from datapizza.modules.parsers.docling import DoclingParser
+    from datapizza.modules.parsers.docling.ocr_options import OCREngine, OCROptions
+
+    class CachedDoclingParser(DoclingParser):
+        def parse_to_json(self, file_path: str) -> dict:
+            key = hashlib.sha256(Path(file_path).read_bytes()).hexdigest()
+            cached = PARSE_CACHE / f"{key}-{self.ocr_options.engine.value}.json"
+            if cached.is_file():
+                print(f"parse cache: {Path(file_path).name}")
+                return json.loads(cached.read_text(encoding="utf-8"))
+            data = super().parse_to_json(file_path)
+            cached.parent.mkdir(parents=True, exist_ok=True)
+            cached.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+            return data
+
+    engine = OCREngine.EASY_OCR if ocr else OCREngine.NONE
+    return CachedDoclingParser(ocr_options=OCROptions(engine=engine))
 
 
 def _local_qdrant(path: Path):
@@ -235,8 +309,6 @@ def ingest_corpus(
 ):
     from datapizza.core.vectorstore import VectorConfig
     from datapizza.embedders import ChunkEmbedder
-    from datapizza.modules.parsers.docling import DoclingParser
-    from datapizza.modules.splitters import RecursiveSplitter
     from datapizza.pipeline import IngestionPipeline
 
     if rebuild and qdrant_path.exists():
@@ -257,21 +329,27 @@ def ingest_corpus(
         collection_name=collection,
         vector_config=[VectorConfig(dimensions=EMBEDDING_DIM, name=EMB_NAME)],
     )
-    ingestion = IngestionPipeline(
-        modules=[
-            DoclingParser(),
-            RecursiveSplitter(max_char=1024, overlap=128),
-            ChunkEmbedder(client=embedder, embedding_name=EMB_NAME),
-        ],
-        vector_store=vector_store,
-        collection_name=collection,
-    )
-    for path, document_id in files:
-        ingestion.run(
+
+
+    def pipeline(ocr: bool):
+        return IngestionPipeline(
+            modules=[
+                build_parser(ocr),
+                build_splitter(),
+                ChunkEmbedder(client=embedder, embedding_name=EMB_NAME),
+            ],
+            vector_store=vector_store,
+            collection_name=collection,
+        )
+
+    ingestion = {False: pipeline(False), True: pipeline(True)}
+    for path, document_id, modality in files:
+        needs_ocr = FORCE_OCR_ALL or modality not in DIGITAL_MODALITIES
+        ingestion[needs_ocr].run(
             file_path=str(path),
             metadata={"document_id": document_id, "source_file": path.name},
         )
-        print(f"ingest: {document_id} <- {path.name}")
+        print(f"ingest: {document_id} <- {path.name} (ocr={'on' if needs_ocr else 'off'})")
     n_chunk = len(list(vector_store.dump_collection(collection)))
     print(f"Ingest completato: {n_chunk} chunk in '{collection}'")
     return vector_store
@@ -416,6 +494,12 @@ def main() -> int:
     parser.add_argument("--manifest", type=Path, default=Path("data/manifest.json"))
     parser.add_argument("--qdrant-path", type=Path, default=Path(os.getenv("QDRANT_PATH", "outputs/qdrant")))
     parser.add_argument("--collection", default=os.getenv("COLLECTION_NAME", "caso_dei_mille"))
+    parser.add_argument(
+        "--act",
+        type=int,
+        nargs="+",
+        help="Indicizza e interroga solo gli act indicati (default: tutto il manifest)",
+    )
     parser.add_argument("--k", type=int, default=int(os.getenv("MAX_CONTEXTS", "5")))
     parser.add_argument("--rebuild", action="store_true", help="Ricostruisce l'indice Qdrant")
     parser.add_argument("--validate-only", action="store_true", help="Valida una submission già prodotta")
@@ -424,6 +508,9 @@ def main() -> int:
 
     if not 1 <= args.k <= 5:
         raise SystemExit("--k deve essere tra 1 e 5")
+
+    if args.act:
+        args.collection = f"{args.collection}_act{''.join(str(a) for a in sorted(args.act))}"
 
     if args.validate_only:
         if not args.submission:
@@ -443,7 +530,7 @@ def main() -> int:
     project_root = Path.cwd()
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
     questions = json.loads(args.questions.read_text(encoding="utf-8"))
-    files = iter_ingest_files(manifest, project_root)
+    files = iter_ingest_files(manifest, project_root, args.act)
     if not files:
         raise SystemExit("Nessun documento ingeribile dal manifest")
 
