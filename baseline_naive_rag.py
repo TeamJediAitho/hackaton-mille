@@ -247,6 +247,12 @@ MUTE_DOCUMENT_CHARS = 40
 # Qdrant restano sul thread main per evitare upsert concorrenti sul client locale.
 # INGEST_WORKERS=1 ripristina l'esecuzione sequenziale, utile per gli A/B.
 INGEST_WORKERS = int(os.getenv("INGEST_WORKERS", "4"))
+# E7: una mappa o un manifesto restituiscono all'OCR un elenco di parole nell'ordine in cui
+# stanno sull'immagine, con le etichette coperte dai riquadri. Un modello con visione le rilegge
+# in chiaro. La didascalia entra ACCANTO al testo OCR, mai al posto suo: la guida vieta di
+# sostituire l'originale con una ricostruzione piu' leggibile. CAPTION_IMAGES=0 la spegne.
+CAPTION_IMAGES = os.getenv("CAPTION_IMAGES", "1") == "1"
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".tif", ".tiff"}
 
 # E5: `reliability` del manifest tradotta in una qualifica leggibile dal generatore. Il modello non
 # sa da solo che «articolo_propaganda_01» e' un foglio celebrativo o che una bozza e' stata
@@ -265,6 +271,38 @@ RELIABILITY_LABELS = {
     "unverified_hearsay": "copia anonima, voci non verificate",
     "contested": "testimonianza tardiva e contestata",
 }
+
+
+def caption_image(path: Path, model: str, api_key: str) -> str:
+    """Trascrizione del testo visibile in un'immagine, in cache come il parsing.
+
+    Una chiamata per immagine in ingest, zero per domanda. La cache vive accanto a quella di
+    Docling e usa la stessa chiave sha256, cosi' un file immutato non si ripaga mai due volte.
+    """
+    key = hashlib.sha256(path.read_bytes()).hexdigest()
+    cached = PARSE_CACHE / f"{key}-caption-{model}.txt"
+    if cached.is_file():
+        print(f"caption cache: {path.name}")
+        return cached.read_text(encoding="utf-8")
+    import base64
+    from openai import OpenAI
+
+    payload = base64.b64encode(path.read_bytes()).decode()
+    response = OpenAI(api_key=api_key).chat.completions.create(
+        model=model,
+        messages=[{"role": "user", "content": [
+            {"type": "text", "text": (
+                "Trascrivi TUTTO il testo visibile in questa immagine: titolo, toponimi, etichette, "
+                "legenda, annotazioni, numeri. Riporta le parole come sono scritte, senza "
+                "interpretarle e senza aggiungere nulla che non sia scritto. Elenco secco."
+            )},
+            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{payload}"}},
+        ]}],
+    )
+    text = (response.choices[0].message.content or "").strip()
+    cached.parent.mkdir(parents=True, exist_ok=True)
+    cached.write_text(text, encoding="utf-8")
+    return text
 
 
 def build_splitter():
@@ -365,6 +403,8 @@ def ingest_corpus(
     qdrant_path: Path,
     collection: str,
     rebuild: bool,
+    caption_model: str = "",
+    caption_key: str = "",
 ):
     from datapizza.core.vectorstore import VectorConfig
     from datapizza.embedders import ChunkEmbedder
@@ -410,7 +450,25 @@ def ingest_corpus(
             pipelines = local.pipelines = {}
         if needs_ocr not in pipelines:
             pipelines[needs_ocr] = build_ingest_pipeline(needs_ocr)
-        return needs_ocr, pipelines[needs_ocr].run(file_path=str(path))
+        chunks = list(pipelines[needs_ocr].run(file_path=str(path)))
+        # E7: la didascalia si AGGIUNGE al testo OCR, non lo sostituisce - l'OCR resta nel
+        # contesto parola per parola, tracciabile. Sta nello STESSO chunk perche' MAX_PER_DOC=1
+        # da' un solo slot per documento: due chunk se lo ruberebbero a vicenda. Il file di
+        # appoggio riusa splitter ed embedder, senza costruire tipi a mano.
+        if CAPTION_IMAGES and caption_model and path.suffix.lower() in IMAGE_SUFFIXES:
+            text = caption_image(path, caption_model, caption_key)
+            if text:
+                ocr_text = "\n".join((getattr(c, "text", "") or "") for c in chunks).strip()
+                side = PARSE_CACHE / f"caption-{document['document_id']}.md"
+                side.parent.mkdir(parents=True, exist_ok=True)
+                side.write_text(
+                    f"{ocr_text}\n\nTrascrizione automatica dell'immagine:\n{text}",
+                    encoding="utf-8",
+                )
+                if False not in pipelines:
+                    pipelines[False] = build_ingest_pipeline(False)
+                chunks = list(pipelines[False].run(file_path=str(side)))
+        return needs_ocr, chunks
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = [pool.submit(ingest_one, path, document) for path, document in files]
@@ -757,6 +815,8 @@ def main() -> int:
         qdrant_path=args.qdrant_path,
         collection=args.collection,
         rebuild=args.rebuild,
+        caption_model=model,
+        caption_key=api_key,
     )
     dag = build_naive_dag(llm)
     bm25 = Bm25(list(vector_store.dump_collection(args.collection))) if HYBRID else None
