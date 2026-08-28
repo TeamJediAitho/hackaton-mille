@@ -48,10 +48,22 @@ QUALIFIERS = (
 LATENCY_BANDS = ((4000, 7), (8000, 5), (15000, 3), (25000, 1))
 COST_BANDS = ((0.005, 8), (0.02, 6), (0.05, 3), (0.10, 1))
 
+# Pesi della tabella di SCORING_AND_FAIRNESS.md. Le quattro voci di retrieval sono la media della
+# metrica per domanda moltiplicata per il peso: la formula riproduce al decimale i 26,0667 punti del
+# feedback ufficiale del round 2 (cfr. `tests/test_score.py`). Generation (35) e Historical Review
+# (10) richiedono un giudice, qui non si stimano.
+RETRIEVAL_WEIGHTS = (("recall@5", 20), ("precision@5", 10), ("hit@5", 5), ("mrr", 5))
+RETRIEVAL_MAX = sum(weight for _, weight in RETRIEVAL_WEIGHTS)
+
+
+# Le annotazioni degli organizzatori usano l'apostrofo tipografico («Sant’Elia»), il generatore
+# quello ASCII: senza questa equivalenza un fatto presente nella risposta risultava mancante.
+QUOTES = str.maketrans({"’": "'", "‘": "'", "ʼ": "'", "“": '"', "”": '"'})
+
 
 def normalize(text: str) -> str:
-    """Minuscole, senza accenti, spazi compattati: l'OCR dell'archivio e' rumoroso."""
-    stripped = unicodedata.normalize("NFKD", text.lower())
+    """Minuscole, senza accenti, apostrofi uniformi, spazi compattati: l'OCR dell'archivio e' rumoroso."""
+    stripped = unicodedata.normalize("NFKD", text.lower().translate(QUOTES))
     stripped = "".join(char for char in stripped if not unicodedata.combining(char))
     return " ".join(stripped.split())
 
@@ -125,7 +137,11 @@ def score_question(answer: dict, annotation: dict, in_scope: set[str] | None = N
     expects_abstention = annotation.get("requires_abstention", False) or not relevant
 
     retrieved = [context["document_id"] for context in answer["contexts"]]
-    hit_ranks = [rank for rank, doc in enumerate(retrieved, start=1) if doc in relevant]
+    # Il punteggio ufficiale ragiona per documento, non per chunk: due contesti dello stesso
+    # `document_id` valgono uno solo, sia al numeratore sia al denominatore di precision, sia nel
+    # rank. Verificato contro le dieci domande di `feedback/feedback_round_2_67.json`.
+    unique = list(dict.fromkeys(retrieved))
+    hit_ranks = [rank for rank, doc in enumerate(unique, start=1) if doc in relevant]
     abstained = is_abstention(answer["answer"])
     absent = missing_facts(answer["answer"], annotation.get("required_facts", []))
 
@@ -145,8 +161,10 @@ def score_question(answer: dict, annotation: dict, in_scope: set[str] | None = N
         "expects_abstention": expects_abstention,
         "abstained": abstained,
         "retrieved": retrieved,
-        "recall": len(set(retrieved) & relevant) / len(relevant) if relevant else None,
-        "precision": (len([d for d in retrieved if d in pertinent]) / len(retrieved)) if retrieved else 0.0,
+        "unique_documents": unique,
+        "duplicate_slots": len(retrieved) - len(unique),
+        "recall": len(set(unique) & relevant) / len(relevant) if relevant else None,
+        "precision": (len([d for d in unique if d in pertinent]) / len(unique)) if unique else 0.0,
         "hit": bool(hit_ranks),
         "rr": 1 / hit_ranks[0] if hit_ranks else 0.0,
         "first_rank": hit_ranks[0] if hit_ranks else None,
@@ -217,6 +235,17 @@ def score_submission(payload: dict, annotations: dict, in_scope: set[str] | None
 METRICS = ("recall@5", "precision@5", "hit@5", "mrr")
 
 
+def official_points(result: dict) -> dict:
+    """Le voci di punteggio calcolabili senza giudice: retrieval (40) + sistema (15)."""
+    parts = {key: result[key] * weight for key, weight in RETRIEVAL_WEIGHTS}
+    parts["latency"] = float(band_points(result["latency_mean_ms"], LATENCY_BANDS))
+    parts["cost"] = float(band_points(result["cost_mean_eur"], COST_BANDS))
+    parts["retrieval"] = sum(parts[key] for key, _ in RETRIEVAL_WEIGHTS)
+    parts["system"] = parts["latency"] + parts["cost"]
+    parts["total"] = parts["retrieval"] + parts["system"]
+    return parts
+
+
 def report(result: dict, baseline: dict | None = None) -> None:
     print(f"Domande valutate: {result['n_questions']} ({result['n_scored']} con fonti rilevanti in scope)\n")
     print("RETRIEVAL")
@@ -247,6 +276,17 @@ def report(result: dict, baseline: dict | None = None) -> None:
     print(f"  latenza p95 / max     {result['latency_p95_ms']:.0f} / {result['latency_max_ms']:.0f} ms")
     print(f"  costo medio           EUR {result['cost_mean_eur']:.6f}  -> {cost_pts}/8")
 
+    points = official_points(result)
+    previous_points = official_points(baseline) if baseline else None
+    print("\nPUNTEGGIO UFFICIALE STIMATO (retrieval 40 + sistema 15; generation e speech esclusi)")
+    for key, weight in RETRIEVAL_WEIGHTS:
+        delta = f"   ({points[key] - previous_points[key]:+.2f})" if previous_points else ""
+        print(f"  {key:<12} {points[key]:6.2f}/{weight}{delta}")
+    print(f"  {'latenza':<12} {points['latency']:6.2f}/7")
+    print(f"  {'costo':<12} {points['cost']:6.2f}/8")
+    delta = f"   ({points['total'] - previous_points['total']:+.2f})" if previous_points else ""
+    print(f"  {'TOTALE':<12} {points['total']:6.2f}/{RETRIEVAL_MAX + 15}{delta}")
+
     print("\nPER DOMANDA")
     print(f"  {'id':<8} {'esito':<16} {'rec':>5} {'prec':>5} {'rank':>5}  note")
     previous = {row["question_id"]: row["verdict"] for row in baseline["rows"]} if baseline else {}
@@ -254,6 +294,8 @@ def report(result: dict, baseline: dict | None = None) -> None:
         recall = "  n/d" if row["recall"] is None else f"{row['recall']:5.2f}"
         rank = "    -" if row["first_rank"] is None else f"{row['first_rank']:5d}"
         notes = []
+        if row["duplicate_slots"]:
+            notes.append(f"{row['duplicate_slots']} slot su chunk dello stesso documento")
         if row["first_rank"] and row["first_rank"] > 2:
             notes.append("prima fonte rilevante sotto il rank 2")
         if row["missing_facts"]:
@@ -274,14 +316,16 @@ def report(result: dict, baseline: dict | None = None) -> None:
 def corpus_text(manifest: dict, document_ids: set[str]) -> dict[str, str]:
     """Testo normalizzato dei documenti richiesti, riletto dalla cache di parsing.
 
-    Usa lo stesso parser e lo stesso splitter dell'ingest, quindi non chiama nessuna API e non
-    rifa' l'OCR: i file gia' parsati arrivano da `outputs/parse_cache/`.
+    Il riferimento e' il markdown del **parser**, non la ricucitura dei chunk: lo splitter scarta
+    i frammenti troppo corti e i duplicati, quindi unire i chunk produce un testo con dei buchi e
+    segnalava come non tracciabili contesti che nel documento ci sono, parola per parola. Usa lo
+    stesso parser dell'ingest, quindi non chiama nessuna API e non rifa' l'OCR: i file gia' parsati
+    arrivano da `outputs/parse_cache/`.
     """
-    from baseline_naive_rag import DIGITAL_MODALITIES, FORCE_OCR_ALL, build_parser, build_splitter, choose_primary
+    from baseline_naive_rag import DIGITAL_MODALITIES, FORCE_OCR_ALL, build_parser, choose_primary
 
     project_root = Path.cwd()
     parsers = {False: build_parser(False), True: build_parser(True)}
-    splitter = build_splitter()
     texts: dict[str, str] = {}
     for document in manifest["documents"]:
         if document["document_id"] not in document_ids:
@@ -290,8 +334,7 @@ def corpus_text(manifest: dict, document_ids: set[str]) -> dict[str, str]:
         if primary is None:
             continue
         needs_ocr = FORCE_OCR_ALL or document.get("modality", "") not in DIGITAL_MODALITIES
-        chunks = splitter.split(parsers[needs_ocr].parse(str(primary)))
-        texts[document["document_id"]] = normalize("\n".join(chunk.text for chunk in chunks))
+        texts[document["document_id"]] = normalize(parsers[needs_ocr].parse(str(primary)).content)
     return texts
 
 
