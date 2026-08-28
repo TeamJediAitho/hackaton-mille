@@ -1,6 +1,9 @@
+import json
+from pathlib import Path
+
 import pytest
 
-from score_submission import band_points, is_abstention, score_submission
+from score_submission import band_points, is_abstention, official_points, score_submission
 
 COST_BANDS = ((0.005, 8), (0.02, 6))
 
@@ -205,3 +208,78 @@ def test_a_forbidden_claim_quoted_to_deny_it_is_not_an_assertion():
     verdicts = {row["question_id"]: row["verdict"] for row in result["rows"]}
     assert verdicts == {"Q1": "OK", "Q2": "ABSTENTION_MISS"}
     assert result["forbidden_claims"] == 1
+
+
+# ---------------------------------------------------------------------------
+# Conformita' al punteggio ufficiale
+# ---------------------------------------------------------------------------
+
+FEEDBACK = Path(__file__).resolve().parent.parent / "feedback" / "feedback_round_2_67.json"
+
+
+def official_feedback():
+    if not FEEDBACK.is_file():
+        pytest.skip(f"{FEEDBACK} non presente")
+    return json.loads(FEEDBACK.read_text(encoding="utf-8"))
+
+
+def submission_and_annotations_from(feedback: dict) -> tuple[dict, dict]:
+    """Ricostruisce submission e gold dal feedback: sono esattamente cio' che la piattaforma ha
+    valutato, quindi il nostro scorer deve restituire gli stessi numeri."""
+    answers = []
+    questions = []
+    for row in feedback["questions"]:
+        metrics = row["metrics"]
+        answers.append({
+            "question_id": metrics["question_id"],
+            "question": row["question"]["question"],
+            "answer": row["team_answer"],
+            "contexts": [
+                {"rank": c["rank"], "document_id": c["document_id"], "content": c["content"]}
+                for c in row["contexts"]
+            ],
+            "telemetry": telemetry(),
+        })
+        questions.append({
+            "question_id": metrics["question_id"],
+            "question": row["question"]["question"],
+            "relevant_sources": row["expected_sources"]["relevant_sources"],
+            "acceptable_sources": row["expected_sources"]["acceptable_sources"],
+            "requires_abstention": metrics["requires_abstention"],
+            "required_facts": [],
+        })
+    submission = {"schema_version": "1.0", "round_id": feedback["round_id"], "answers": answers}
+    return submission, {"round_id": feedback["round_id"], "questions": questions}
+
+
+def test_per_question_metrics_match_the_official_feedback():
+    """Il punteggio ufficiale conta i `document_id` **deduplicati**: due chunk dello stesso
+    documento valgono uno solo in recall, precision e rank. Questo test blocca le formule."""
+    feedback = official_feedback()
+    result = score_submission(*submission_and_annotations_from(feedback))
+    rows = {row["question_id"]: row for row in result["rows"]}
+    for entry in feedback["questions"]:
+        official = entry["metrics"]["retrieval"]
+        row = rows[entry["metrics"]["question_id"]]
+        assert row["recall"] == pytest.approx(official["recall_at_5"])
+        assert row["precision"] == pytest.approx(official["precision_up_to_5"])
+        assert float(row["hit"]) == pytest.approx(official["hit_at_5"])
+        assert row["rr"] == pytest.approx(official["rank_quality"])
+
+
+def test_estimated_retrieval_points_match_the_official_total():
+    feedback = official_feedback()
+    result = score_submission(*submission_and_annotations_from(feedback))
+    assert official_points(result)["retrieval"] == pytest.approx(feedback["scores"]["retrieval"], abs=1e-3)
+
+
+def test_bare_abstention_is_detected_only_at_the_start():
+    """La rete anti-astensione (baseline_naive_rag) deve scattare sulla formula in apertura e non
+    su una risposta che *cita* l'insufficienza delle prove."""
+    from baseline_naive_rag import is_bare_abstention
+
+    assert is_bare_abstention("Non lo so.")
+    assert is_bare_abstention("  non lo so  ")
+    assert is_bare_abstention("Non è possibile stabilirlo con le carte disponibili.")
+    assert not is_bare_abstention("Le carte non provano un accordo: non lo so dire oltre.")
+    assert not is_bare_abstention("")

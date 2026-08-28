@@ -30,7 +30,9 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 import unicodedata
 from collections import Counter
+from functools import lru_cache
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, Literal
 
 from dotenv import load_dotenv
@@ -224,16 +226,35 @@ FORCE_OCR_ALL = os.getenv("FORCE_OCR_ALL") == "1"
 CHUNK_MAX_CHAR = int(os.getenv("CHUNK_MAX_CHAR", "1024"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "128"))
 CHUNK_MIN_CHAR = int(os.getenv("CHUNK_MIN_CHAR", "80"))
-# E4: quanti candidati chiedere a ciascun retriever prima della fusione RRF.
+# E4: quanti candidati chiedere a ciascun retriever prima della fusione RRF. Misurato: 15, 30 e 60
+# selezionano gli stessi cinque documenti, quindi resta 15.
 FETCH_K = int(os.getenv("FETCH_K", "15"))
 # HYBRID=0 torna al solo denso, per gli A/B senza toccare il codice.
 HYBRID = os.getenv("HYBRID", "1") == "1"
 # E2: 0 = consegna sempre k contesti; >0 = taglia sotto questa frazione del punteggio fuso migliore.
-TRIM_RATIO = float(os.getenv("TRIM_RATIO", "0"))
-# E10: quanti chunk al massimo puo' occupare uno stesso documento nei contesti finali.
-# 0 = nessun limite. Le domande cross-document hanno cinque slot per due o tre fonti: un
-# documento lungo e rumoroso (garib_d05, garib_d08) puo' prenderseli quasi tutti.
-MAX_PER_DOC = int(os.getenv("MAX_PER_DOC", "2"))
+# Acceso a 0,90 dopo il round 2: la precision ufficiale e' `pertinenti / documenti unici consegnati`,
+# quindi il quinto documento debole si paga e non porta niente. Misurato sul gold reale: recall e
+# hit@5 restano identici (0,687 e 1,000), la precision sale da 0,260 a 0,402. Soglia prudente: taglia
+# solo le code lontane dal primo, non i candidati vicini.
+TRIM_RATIO = float(os.getenv("TRIM_RATIO", "0.90"))
+# E15: il testo consegnato per ogni documento selezionato. Il feedback del round 2 mostra che il
+# punteggio conta i `document_id` **deduplicati**: un fatto che sta nel documento ma fuori dal chunk
+# vincente e' evidenza persa senza alcun risparmio (R2_Q004 aveva la mappa al rank 1 e ha comunque
+# perso «22-24»). Sotto questa soglia si consegna il documento intero; sopra, una finestra contigua.
+# La mediana dei documenti sta sui 2 000 caratteri, quindi a 4 000 quasi tutto l'archivio viaggia
+# intero e si ritagliano solo le scansioni lunghe e rumorose (`garib_*`, fino a 85 000 char).
+# Misurato: la latenza per domanda correla con i token di **output** (+0,79) e non con quelli di
+# input (+0,03), e il costo ha dodici volte il margine necessario. L'evidenza in ingresso e' quindi
+# quasi gratis: la si paga in lunghezza della risposta, non in ampiezza del contesto.
+# E19: pseudo-relevance feedback. I documenti trovati al primo giro nominano spesso quelli che
+# mancano — il verbale di Lanza cita il «dispaccio» e la «nota di rettifica», cioe' le due fonti
+# perse su R2_Q007. Un secondo giro lessicale con i termini piu' distintivi dei primi risultati non
+# costa nessuna chiamata: BM25 sta in memoria. Misurato: MRR da 0,758 a 0,808 su ogni combinazione
+# provata, senza mai perdere recall o hit. PRF_SEEDS=0 lo spegne, per gli A/B.
+PRF_SEEDS = int(os.getenv("PRF_SEEDS", "3"))
+PRF_TERMS = int(os.getenv("PRF_TERMS", "80"))
+DOC_TEXT_DIR = Path(os.getenv("DOC_TEXT_PATH", "outputs/doc_text"))
+DOC_CONTEXT_MAX_CHAR = int(os.getenv("DOC_CONTEXT_MAX_CHAR", "4000"))
 # E11: LEXICAL_META=0 indicizza in BM25 il solo testo del chunk, per gli A/B.
 LEXICAL_META = os.getenv("LEXICAL_META", "1") == "1"
 # Sotto questa soglia di caratteri indicizzati un documento e' muto: e' entrato nell'indice ma non
@@ -370,6 +391,9 @@ def ingest_corpus(
 
     if rebuild and qdrant_path.exists():
         shutil.rmtree(qdrant_path)
+    documents_dir = doc_text_dir(collection)
+    if rebuild and documents_dir.exists():
+        shutil.rmtree(documents_dir)
     qdrant_path.mkdir(parents=True, exist_ok=True)
 
     vector_store = _local_qdrant(qdrant_path)
@@ -408,7 +432,11 @@ def ingest_corpus(
             pipelines = local.pipelines = {}
         if needs_ocr not in pipelines:
             pipelines[needs_ocr] = build_ingest_pipeline(needs_ocr)
-        return needs_ocr, pipelines[needs_ocr].run(file_path=str(path))
+        pipeline = pipelines[needs_ocr]
+        chunks = pipeline.run(file_path=str(path))
+        # E15: il markdown del parser e' il testo da cui si ritagliano i contesti. La seconda parse
+        # e' un colpo di cache (CachedDoclingParser), non un secondo OCR.
+        return needs_ocr, chunks, pipeline.components[0].parse(str(path)).content
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
         futures = [pool.submit(ingest_one, path, document) for path, document in files]
@@ -420,8 +448,10 @@ def ingest_corpus(
     # parallelo i chunk sono gia' in mano al chiamante: il conteggio non costa piu' una rilettura.
     all_chunks = []
     mute: list[str] = []
-    for (path, document), (needs_ocr, chunks) in zip(files, results, strict=True):
+    documents_dir.mkdir(parents=True, exist_ok=True)
+    for (path, document), (needs_ocr, chunks, content) in zip(files, results, strict=True):
         document_id = document["document_id"]
+        (documents_dir / f"{document_id}.md").write_text(content, encoding="utf-8")
         for chunk in chunks:
             chunk.metadata.update({
                 "document_id": document_id,
@@ -450,18 +480,49 @@ def ingest_corpus(
     return vector_store
 
 
+# Ogni riga aggiunta dopo il round 2 corrisponde a una motivazione esplicita del giudice: i punti
+# di generation persi non erano fonti mancanti, erano fatti presenti nei contesti e non riportati.
 GROUNDING = (
     "Rispondi SOLO usando il contesto fornito. Ogni brano inizia con il suo document_id tra "
     "parentesi quadre, es. [cronologia_ufficiale_01], seguito dalla qualifica della fonte. Cita "
     "SEMPRE la fonte con ESATTAMENTE quel document_id.\n"
+    # R2_Q003 (correttezza 0,10) e R2_Q004 (0,67): la mappa era al rank 1 e conteneva «22-24»,
+    # «deposito Lo Bianco: 12 carri» e i toponimi. La risposta li ha riassunti invece di riportarli.
+    "Riporta TESTUALMENTE le date, gli orari, le cifre, le quantita', i nomi di luogo e di persona e "
+    "le formule esatte che compaiono nel contesto: non parafrasarli e non riassumerli via. Se il "
+    "contesto elenca voci etichettate (A, B, C; righe di un registro), trattale una per una.\n"
+    # R2_Q003 e R2_Q004 (ragionamento storico 0,65 e 0,40): il contesto diceva di se' «ANNOTAZIONI
+    # NARRATIVE SIMULATE non storiche» e la risposta non l'ha detto.
+    "Se un documento dichiara la propria natura o i propri limiti - annotazioni simulate o non "
+    "storiche, copia non firmata, testo incompleto o illeggibile, foglio di parte - riportalo "
+    "esplicitamente insieme a cio' che ne ricavi.\n"
     "Qualifica la fonte prima di riportarne il contenuto quando la qualifica lo richiede: "
     "propaganda, voci non verificate, testimonianze tardive o contestate, bozze superate. Non "
     "presentare mai come fatto cio' che una fonte di parte afferma: scrivi chi lo afferma.\n"
-    "Distingui prova diretta, indizio e congettura, e dichiara cosa le carte non provano.\n"
+    # R2_Q009 (correttezza 0,60): la domanda confrontava piu' testi, la risposta ne ha trattato uno.
+    "Se la domanda mette a confronto piu' testi, piu' versioni o piu' luoghi, tratta ESPLICITAMENTE "
+    "ognuno, anche solo per dire che il contesto non lo copre.\n"
+    # R2_Q001, Q006 e Q010 (fedelta' 0,92-0,94): inferenze ragionevoli presentate come lettura.
+    "Distingui prova diretta, indizio e congettura, e dichiara cosa le carte non provano. Cio' che "
+    "deduci e non leggi va introdotto con «e' un'inferenza:».\n"
     "Se due documenti sono versioni concorrenti dello stesso atto, riportale entrambe con le loro "
     "date: la versione riveduta non cancella la bozza.\n"
-    "Se il contesto non contiene la risposta, di' esattamente: 'Non lo so'. Se contiene evidenza "
-    "anche solo parziale, rispondi con quella e dichiarane i limiti invece di astenerti."
+    "Riserva la formula esatta 'Non lo so' al caso in cui i brani non parlino affatto "
+    "dell'argomento della domanda. Se contengono evidenza anche solo parziale o indiretta - e su "
+    "una domanda di confronto o di sintesi e' quasi sempre cosi' - rispondi con quella e "
+    "dichiarane i limiti: astenersi quando l'evidenza c'e' vale zero, dire cosa le carte mostrano "
+    "e cosa non provano vale pieno.\n"
+    # R2_Q008 e' una domanda a evidenza insufficiente: chiudere con «non e' una prova
+    # incontrovertibile» lascia intendere che una prova parziale ci sia. La formula dev'essere netta.
+    "Quando le carte non bastano a stabilire cio' che la domanda chiede, dillo in modo netto - «le "
+    "carte non dimostrano che...», «non ci sono prove che...» - e mai con formule attenuate come "
+    "«non e' una prova incontrovertibile», che lasciano intendere una prova parziale.\n"
+    # Il tetto tiene le risposte dense, non serve a governare la latenza: misurata su giri ripetuti
+    # a configurazione identica oscilla fra 3 345 e 4 630 ms, e la varianza dell'API e' piu' grande
+    # di qualunque differenza fra 170 e 220 parole. La fascia dei 4 secondi era gia' una moneta
+    # lanciata nel round 2 valutato (3 762 ms). L'ampiezza del contesto in ingresso non la sposta
+    # affatto: l'evidenza in ingresso e' quasi gratis. Non tarare questo numero sul cronometro.
+    "Massimo 170 parole: denso di fatti, senza preamboli, senza ripetere la domanda."
 )
 
 
@@ -505,7 +566,13 @@ def _lexical_text(chunk: Any) -> str:
     E11: una domanda come «confrontando i tre testi propagandistici» non ha nessuna parola in
     comune con i fogli che cerca — «propaganda» sta nel manifest, non nel documento. Titolo e
     qualifica entrano quindi nell'indice lessicale. **Il testo consegnato al generatore non
-    cambia**: i contesti restano il `chunk.text` originale, tracciabile nel corpus.
+    cambia**: il testo dei contesti resta tracciabile nel corpus.
+
+    E13: anche il `document_id`, che e' spesso l'unico posto in cui la parola della domanda compare
+    («agenda» di R2_Q001 sta li' e non nel titolo «Estratto dal taccuino della casa Sant'Elia»).
+    Da solo non basta e costa 0,01 di MRR; serve invece al giro di feedback E19, a cui consegna semi
+    migliori. Misurato insieme: +0,033 di recall e +0,050 di MRR. Le due cose si tengono o si
+    tolgono insieme.
     """
     text = getattr(chunk, "text", "") or ""
     if not LEXICAL_META:
@@ -513,6 +580,7 @@ def _lexical_text(chunk: Any) -> str:
     metadata = getattr(chunk, "metadata", None)
     return " ".join([
         text,
+        _meta_get(metadata, "document_id").replace("_", " "),
         _meta_get(metadata, "title"),
         _meta_get(metadata, "qualifica"),
         _meta_get(metadata, "reliability"),
@@ -552,43 +620,120 @@ class Bm25:
         return [self.chunks[index] for _, index in scored[:k]]
 
 
-def reciprocal_rank_fusion(rankings: list[list[Any]], k: int, constant: int = 60) -> list[Any]:
-    """RRF: un documento sale se compare in alto in *entrambe* le liste.
+def fuse_documents(rankings: list[list[Any]], k: int, constant: int = 60) -> list[tuple[str, Any]]:
+    """RRF sui chunk, selezione sui **documenti**: un documento sale se compare in alto in
+    *entrambe* le liste, ed entra nei contesti una volta sola.
 
-    E2: con TRIM_RATIO > 0 si consegnano meno di k contesti, tagliando quelli il cui punteggio
-    fuso scende sotto quella frazione del primo. Cinque contesti sono un massimo, non una quota.
+    E14: il punteggio ufficiale conta i `document_id` deduplicati — due chunk dello stesso
+    documento occupano due slot su cinque e ne valgono uno. Nel round 2 sono stati otto slot buttati
+    su sei domande, proprio dove mancava recall (R2_Q007 e R2_Q008 hanno consegnato cinque contesti
+    che valevano tre documenti).
+
+    Dentro una lista si tiene solo il chunk migliore di ciascun documento (il **massimo**, non la
+    somma: `garib_d08` ha 113 chunk sui 193 dell'indice e sommando vincerebbe qualunque domanda);
+    fra liste diverse i punteggi si sommano, che e' il senso di RRF.
+
+    E2: con TRIM_RATIO > 0 si consegnano meno di k documenti, tagliando quelli il cui punteggio
+    scende sotto quella frazione del primo. Cinque contesti sono un massimo, non una quota.
     """
-    scores: dict[tuple[str, str], float] = {}
-    chunks: dict[tuple[str, str], Any] = {}
+    scores: dict[str, float] = {}
+    best: dict[str, tuple[int, Any]] = {}
     for ranking in rankings:
+        seen: set[str] = set()
         for rank, chunk in enumerate(ranking, start=1):
-            key = (_meta_get(getattr(chunk, "metadata", None), "document_id"), getattr(chunk, "text", ""))
-            scores[key] = scores.get(key, 0.0) + 1 / (constant + rank)
-            chunks.setdefault(key, chunk)
-    ordered = sorted(scores, key=lambda key: -scores[key])
-    if MAX_PER_DOC:
-        seen: dict[str, int] = {}
-        capped = []
-        for key in ordered:
-            document_id = key[0]
-            if seen.get(document_id, 0) >= MAX_PER_DOC:
+            document_id = _meta_get(getattr(chunk, "metadata", None), "document_id")
+            if not document_id or document_id in seen:
                 continue
-            seen[document_id] = seen.get(document_id, 0) + 1
-            capped.append(key)
-        ordered = capped
-    ordered = ordered[:k]
+            seen.add(document_id)
+            scores[document_id] = scores.get(document_id, 0.0) + 1 / (constant + rank)
+            if rank < best.get(document_id, (10**9, None))[0]:
+                best[document_id] = (rank, chunk)
+    ordered = sorted(scores, key=lambda document_id: -scores[document_id])[:k]
     if TRIM_RATIO and ordered:
         floor = scores[ordered[0]] * TRIM_RATIO
-        ordered = [key for key in ordered if scores[key] >= floor]
-    return [chunks[key] for key in ordered]
+        ordered = [document_id for document_id in ordered if scores[document_id] >= floor]
+    return [(document_id, best[document_id][1]) for document_id in ordered]
+
+
+def prf_query(domanda: str, seeds: list[Any], bm25: Bm25) -> str:
+    """La domanda allargata coi termini piu' distintivi dei documenti gia' trovati (E19)."""
+    seen: set[str] = set()
+    terms: list[str] = []
+    for chunk in seeds:
+        for token in _tokens(getattr(chunk, "text", "") or ""):
+            if len(token) > 3 and token not in seen:
+                seen.add(token)
+                terms.append(token)
+    terms.sort(key=lambda token: -bm25.idf.get(token, 0.0))
+    return " ".join([domanda, *terms[:PRF_TERMS]])
 
 
 def retrieve(embedder, vector_store, collection: str, domanda: str, k: int, bm25: Bm25 | None):
-    """Recupera largo e consegna stretto: denso + BM25 fusi con RRF, poi i primi k."""
-    if bm25 is None:
-        return dense_retrieve(embedder, vector_store, collection, domanda, k=k)
-    dense = dense_retrieve(embedder, vector_store, collection, domanda, k=FETCH_K)
-    return reciprocal_rank_fusion([dense, bm25.search(domanda, FETCH_K)], k)
+    """Recupera largo e consegna stretto: denso (+ BM25, + il giro di feedback) fusi con RRF, poi i
+    primi k **documenti**."""
+    rankings = [dense_retrieve(embedder, vector_store, collection, domanda, k=FETCH_K)]
+    if bm25 is not None:
+        rankings.append(bm25.search(domanda, FETCH_K))
+        if PRF_SEEDS and PRF_TERMS:
+            seeds = [chunk for _, chunk in fuse_documents(rankings, PRF_SEEDS)]
+            rankings.append(bm25.search(prf_query(domanda, seeds, bm25), FETCH_K))
+    return fuse_documents(rankings, k)
+
+
+def doc_text_dir(collection: str) -> Path:
+    """Una cartella per collection: `--act 1 2` indicizza in `caso_dei_mille_act12` e non deve
+    sovrascrivere i testi del corpus completo, che `--rebuild` cancellerebbe."""
+    return DOC_TEXT_DIR / collection
+
+
+@lru_cache(maxsize=None)
+def _document_text(directory: Path, document_id: str) -> str:
+    path = directory / f"{document_id}.md"
+    return path.read_text(encoding="utf-8") if path.is_file() else ""
+
+
+def document_context(document_id: str, chunk: Any, directory: Path) -> Any:
+    """Il contesto consegnato per un documento selezionato: il documento intero, oppure una
+    finestra contigua centrata sul chunk che l'ha fatto emergere.
+
+    Il testo deve restare **letterale**: un contesto non riconducibile al suo `document_id` azzera
+    la Faithfulness della domanda. Ogni chunk e' una sottostringa esatta del markdown del parser
+    (verificato su tutto l'archivio), quindi anche le finestre lo sono per costruzione.
+    """
+    metadata = getattr(chunk, "metadata", {})
+    fallback = (getattr(chunk, "text", None) or "").strip()
+    content = _document_text(directory, document_id)
+    if not content:
+        return SimpleNamespace(text=fallback, metadata=metadata)
+    if len(content) <= DOC_CONTEXT_MAX_CHAR:
+        text = content.strip()
+    else:
+        start = content.find(fallback)
+        centre = (start + len(fallback) // 2) if start >= 0 else 0
+        left = max(0, min(centre - DOC_CONTEXT_MAX_CHAR // 2, len(content) - DOC_CONTEXT_MAX_CHAR))
+        text = content[left:left + DOC_CONTEXT_MAX_CHAR].strip()
+    return SimpleNamespace(text=text or fallback, metadata=metadata)
+
+
+# Un'astensione secca su una domanda che l'evidenza copriva vale zero su 35. E' successo davvero:
+# due valutazioni dello stesso round 2, retrieval identico, e in un giro il modello ha risposto
+# «Non lo so.» a R2_Q009 prendendo 0 invece di 28,8 — 3,5 punti sul totale, cinque volte quanto vale
+# tutto il lavoro sul ranking. E' un evento raro e casuale, quindi il prompt da solo non basta:
+# questa e' la rete. Il secondo giro parte solo su quel ramo, quindi non sposta la latenza media.
+ABSTENTION_OPENERS = ("non lo so", "non lo sappiamo", "non e possibile stabilirlo")
+RETRY_WITH_EVIDENCE = (
+    "\n\nATTENZIONE: la risposta precedente si e' astenuta, ma i brani forniti contengono evidenza "
+    "pertinente. Riscrivila usando quell'evidenza: di' che cosa le carte mostrano, con le citazioni "
+    "esatte, e che cosa non provano. Non usare la formula 'Non lo so'."
+)
+
+
+def is_bare_abstention(answer: str) -> bool:
+    """La risposta si apre con la formula di astensione? (Citare l'insufficienza delle prove nel
+    corpo del testo non e' astenersi: si guarda l'inizio, come fa lo scorer.)"""
+    stripped = unicodedata.normalize("NFKD", (answer or "").strip().lower())
+    stripped = "".join(char for char in stripped if not unicodedata.combining(char))
+    return " ".join(stripped.split()).startswith(ABSTENTION_OPENERS)
 
 
 def naive_rag(dag, domanda: str, chunks: list[Any]):
@@ -628,12 +773,22 @@ def answer_one(
 ) -> dict:
     question_text = question["question"]
     started = time.perf_counter()
-    hits = retrieve(embedder, vector_store, collection, question_text, k=k, bm25=bm25)
-    result = naive_rag(dag, question_text, hits)
-    latency_ms = max(0, round((time.perf_counter() - started) * 1000))
-    llm_out = result["llm"]
+    selected = retrieve(embedder, vector_store, collection, question_text, k=k, bm25=bm25)
+    # I contesti dichiarati sono esattamente quelli passati al generatore, nello stesso ordine.
+    hits = [document_context(document_id, chunk, doc_text_dir(collection)) for document_id, chunk in selected]
+    llm_out = naive_rag(dag, question_text, hits)["llm"]
     answer_text = getattr(llm_out, "text", None) or str(llm_out)
-    input_tokens, output_tokens, cached = _token_usage(llm_out)
+    calls = [llm_out]
+    if hits and is_bare_abstention(answer_text):
+        print(f"astensione su {question['question_id']} con {len(hits)} contesti: riprovo")
+        retry = naive_rag(dag, question_text + RETRY_WITH_EVIDENCE, hits)["llm"]
+        calls.append(retry)
+        retry_text = getattr(retry, "text", None) or str(retry)
+        if not is_bare_abstention(retry_text):
+            answer_text = retry_text
+    latency_ms = max(0, round((time.perf_counter() - started) * 1000))
+
+    usage = [_token_usage(call) for call in calls]
     return {
         "question_id": question["question_id"],
         "question": question_text,
@@ -641,7 +796,7 @@ def answer_one(
         "contexts": hits_to_contexts(hits, max_contexts=k),
         "telemetry": {
             "latency_ms": latency_ms,
-            "declared_cost_eur": declared_cost_eur(input_tokens, output_tokens, cached),
+            "declared_cost_eur": round(sum(declared_cost_eur(*row) for row in usage), 6),
             "model_calls": [
                 {
                     "provider": "openai",
@@ -650,6 +805,7 @@ def answer_one(
                     "output_tokens": output_tokens,
                     "cached_input_tokens": cached,
                 }
+                for input_tokens, output_tokens, cached in usage
             ],
         },
     }

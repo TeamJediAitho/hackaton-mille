@@ -500,3 +500,148 @@ make regression
    erano due titoli duplicati e due date che avevano occupato i contesti al posto delle prove.
 3. **Un miglioramento misurato sul solo retrieval non è un miglioramento.** Lo sweep del chunking
    dava +0,075 di precision e, provato end-to-end, toglieva un fatto richiesto alla risposta.
+
+---
+
+# Dopo il round 2: leggere il punteggio invece di indovinarlo
+
+Il round 2 ha chiuso a **72,58/100**. Con il feedback degli organizzatori in mano
+(`feedback/feedback_round_2_67.json` + `feedback/annotations_private_round2.json`) per la prima
+volta si sa *dove* stanno i punti, invece di stimarlo con un gold scritto da noi.
+
+## E12 — Lo scorer misurava una metrica che non esiste
+
+- **Problema:** `score_submission.py` calcolava precision e MRR **sui contesti**, duplicati
+  compresi. Il punteggio ufficiale li calcola sui **`document_id` unici**. Erano due metriche
+  diverse con lo stesso nome, e abbiamo ottimizzato per mesi quella sbagliata.
+- **Formule ufficiali, ricostruite e verificate al decimale su tutte e dieci le domande:**
+
+  | Voce | Formula | Peso |
+  | --- | --- | ---: |
+  | Recall@5 | `|unici ∩ relevant| / |relevant|` | 20 |
+  | Precision fino a 5 | `|unici ∩ (relevant ∪ acceptable)| / |unici|` | 10 |
+  | Hit@5 | almeno un relevant fra gli unici | 5 |
+  | Qualità del ranking | `1 / rank del primo relevant nella lista **deduplicata**` | 5 |
+
+- **Fix:** formule allineate, riga «PUNTEGGIO UFFICIALE STIMATO» nel report, e
+  `tests/test_score.py` ricalcola le dieci domande del feedback e pretende i numeri ufficiali. Le
+  formule non possono piu' andare alla deriva in silenzio.
+- **Corretto anche `verify_contexts`:** il testo di riferimento di un documento era la ricucitura
+  dei suoi chunk, ma lo splitter scarta i frammenti corti e i duplicati, quindi quel testo ha dei
+  buchi e segnalava come «non tracciabili» contesti presenti nel documento parola per parola. Ora il
+  riferimento e' il markdown del parser.
+- **Sostituito il gold del round 2** con quello vero degli organizzatori; il nostro resta in
+  `eval/annotations_round_2_team.json`. Era sbagliato in modo sostanziale: su R2_Q008 avevamo
+  `relevant_sources: []` e sono due, su R2_Q010 ne avevamo tre su cinque e due erano quelle sbagliate.
+- **Lezione:** una metrica che non riproduce il punteggio ufficiale non e' un'approssimazione, e'
+  una metrica diversa. Prima di ottimizzare, riprodurre il numero che conta.
+
+## E14/E15 — La pipeline ragionava per chunk, il punteggio conta i documenti
+
+- **Problema:** con `MAX_PER_DOC=2` due chunk dello stesso documento occupavano due slot su cinque e
+  ne valevano **uno**. Nel round 2 sono stati **otto slot buttati su sei domande**, proprio dove
+  mancava recall: R2_Q007 e R2_Q008 hanno consegnato cinque contesti che valevano tre documenti.
+- **Fix:** RRF sui chunk, selezione sui documenti (`fuse_documents`), un documento una volta sola.
+  Dentro una lista vince il chunk migliore — il **massimo**, non la somma: `garib_d08` ha 113 chunk
+  sui 193 dell'indice e sommando vincerebbe qualunque domanda.
+- **E il contesto e' il documento, non il frammento.** R2_Q004 aveva la mappa al rank 1 e ha perso
+  comunque «22-24» e «ANNOTAZIONI NARRATIVE SIMULATE»: erano nel documento, fuori dal chunk scelto.
+  Ogni chunk e' una sottostringa **letterale** del markdown del parser (verificato su tutto
+  l'archivio), quindi le finestre lo sono per costruzione e la tracciabilita' regge: `0 contesti non
+  tracciabili`.
+- **Attenzione:** `outputs/doc_text/` e' **per collection**. `--rebuild` la cancella, e `--act 1 2`
+  scrive in `caso_dei_mille_act12`: senza separazione la regressione svuotava i testi del corpus
+  completo.
+
+## E13 + E19 — Il `document_id` e il giro di feedback si tengono insieme
+
+- **Problema:** R2_Q001 chiedeva «l'**agenda** degli incontri» e `agenda_incontri_01` non entrava.
+  Il suo titolo e' «Estratto dal taccuino della casa Sant'Elia»: la parola «agenda» esiste **solo
+  nel document_id**, che non era indicizzato.
+- **E13 da solo non basta** (−0,01 di MRR, e l'agenda resta fuori). **E19** — pseudo-relevance
+  feedback, un secondo giro BM25 coi termini piu' distintivi dei primi risultati, nessuna chiamata
+  API — funziona perche' i documenti trovati **nominano quelli che mancano**: il verbale di Lanza
+  cita il «dispaccio» e la «nota di rettifica», cioe' le due fonti perse su R2_Q007.
+- **Misurati insieme:** +0,033 di recall e +0,050 di MRR. **Si tengono o si tolgono insieme.**
+
+## E2 — `TRIM_RATIO` acceso a 0,90
+
+- La precision ufficiale ha per denominatore i **documenti unici consegnati**: il quinto documento
+  debole si paga e non porta niente. Scelto su **entrambi** i round, non su quello sotto mano:
+
+  | trim | round 2 | round 1 | somma |
+  | ---: | ---: | ---: | ---: |
+  | 0,00 | 26,24 | 31,48 | 57,72 |
+  | 0,85 | 26,46 | 32,05 | 58,51 |
+  | **0,90** | **26,79** | **32,55** | **59,34** |
+  | 0,95 | 25,58 | 32,02 | 57,61 |
+
+  A 0,90 recall e hit@5 restano **identici** su entrambi: si tagliano solo le code lontane dal primo.
+
+## Il bilancio onesto del retrieval: un pareggio
+
+| | round 2 (gold vero) | round 1 (gold nostro) |
+| --- | ---: | ---: |
+| prima | 26,07 | 33,57 |
+| dopo | **26,79** | 32,55 |
+| delta | **+0,72** | **−1,02** |
+
+La perdita sul round 1 ha una causa precisa e sgradevole: **il vecchio codice consegnava chunk
+duplicati, che riducono il denominatore della precision**. Era un punteggio piu' alto ottenuto
+sprecando slot di evidenza — un artefatto della metrica. Non lo reintroduciamo: i punti veri stanno
+in generation (35) e li' l'evidenza in piu' serve.
+
+**Lezione: il retrieval e' vicino a un ottimo locale e non compra punti.** Provate e misurate su
+entrambi i round, tutte respinte: `FETCH_K` 15/30/60 (identiche, selezionano gli stessi cinque
+documenti), BM25 sulle schede di manifest come terza lista (scambia recall per niente, hit@5 crolla
+a 0,80), troncamento dei token per lo stemming italiano (+0,57 sul round 2, −0,45 sul round 1: rumore).
+
+## La scoperta piu' cara: un'astensione indebita vale 3,5 punti
+
+`feedback/judge-a38501b0.json` valuta lo **stesso round 2** con **contesti identici** — il retrieval
+e' deterministico — ma **risposte diverse**. In quel giro il modello ha risposto «Non lo so.» a
+R2_Q009 e ha preso **0 su 35** invece di 28,8. Totale 67,99 invece di 72,58.
+
+- Non e' varianza del giudice: e' **la nostra generazione**. Una singola astensione indebita costa
+  **3,5 punti sul totale — cinque volte quanto vale tutto il lavoro sul ranking.**
+- **Fix in due strati:** il prompt riserva «Non lo so» al caso in cui i brani non parlino affatto
+  dell'argomento; e `is_bare_abstention` + un secondo giro sono la **rete deterministica**, perche'
+  un evento raro e casuale non si governa con un'istruzione. Il retry parte solo su quel ramo,
+  quindi non sposta la latenza media, e la telemetria dichiara **entrambe** le chiamate.
+- **Lezione:** contro un fallimento raro e costoso serve una rete, non un'istruzione. Con cinque
+  giri su dieci domande non l'avremmo mai visto: l'abbiamo visto perche' due valutazioni della
+  stessa submission erano in cartella.
+
+## Generation: quattro regole, ognuna da una motivazione del giudice
+
+I punti persi non erano fonti mancanti, erano **fatti presenti nei contesti e non riportati**:
+
+| Regola | Da dove viene |
+| --- | --- |
+| riportare **testualmente** date, cifre, toponimi e formule esatte | R2_Q003 (correttezza 0,10) e R2_Q004 (0,67): la mappa era al rank 1 e conteneva tutto |
+| riportare i **limiti che la fonte dichiara di se'** | R2_Q003 e R2_Q004 (ragionamento 0,65 e 0,40): «ANNOTAZIONI NARRATIVE SIMULATE» era nel contesto |
+| trattare **ogni** termine di confronto della domanda | R2_Q009 (0,60): manca il lato borbonico |
+| marcare l'inferenza con «e' un'inferenza:» | R2_Q001, Q006, Q010 (fedelta' 0,92-0,94) |
+| niente formule attenuate su evidenza insufficiente | R2_Q008 chiudeva con «non e' una prova incontrovertibile», che lascia intendere una prova parziale |
+
+## Latenza: non la governiamo noi
+
+Giri ripetuti a **configurazione identica**: 3 345, 3 353, 4 103, 4 171, 4 630 ms. La varianza
+dell'API e' piu' grande di qualunque modifica nostra, e la fascia dei 4 secondi era gia' una moneta
+lanciata nel round valutato (3 762 ms).
+
+- La latenza correla con i token di **output** (+0,79), non con quelli di **input** (+0,03).
+  L'evidenza in ingresso e' quasi gratis — il costo ha dodici volte il margine necessario — quindi
+  `DOC_CONTEXT_MAX_CHAR=4000` non si paga. Le parole in uscita si pagano.
+- **Non tarare il tetto di parole sul cronometro:** l'abbiamo fatto e stavamo inseguendo rumore.
+
+## Dry run sulla Gold Run
+
+`eval/questions_gold_run.json`, 14 domande. Rank 1 corretto su GOLD_003 (nota di rettifica),
+GOLD_004 (promemoria), GOLD_008 e GOLD_009 (mappa annotata), GOLD_013 (garanzia britannica);
+`agenda_incontri_01` ora entra su GOLD_002 e GOLD_006. Nessuna astensione secca.
+
+**Debolezza nota, e si ripete:** GOLD_011 chiede «le fonti **giornalistiche**» e ne recupera una
+sola, esattamente come R2_Q009 sui «testi **propagandistici**». BM25 non ha stemming e
+«giornalistiche» non incontra «giornale». Il troncamento dei token e' stato provato (E20) e
+respinto: guadagna sul round 2 e perde recall sul round 1.
