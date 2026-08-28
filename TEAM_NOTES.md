@@ -26,7 +26,7 @@ Copiate il blocco per aggiungere un nuovo problema, tranquilli che anche il codi
   risposte convincenti *e* la fonte decisiva solo al rank 3, con tre contesti su cinque fuori tema:
   senza misura sembravano due successi.
 
-### Baseline misurata (pre-opt, corpus completo, 15 documenti)
+### Baseline misurata (pre-opt, corpus di Fase 1 = act 1 + act 2, 15 documenti)
 
 ```bash
 python score_submission.py \
@@ -151,3 +151,48 @@ python score_submission.py --submission outputs/round1/submission_round_1_post_o
 - **I verdetti di generation oscillano fra run**: `required_facts` è un controllo di parole chiave e
   il modello varia la formulazione. Le metriche di retrieval sono invece deterministiche a indice
   fermo.
+
+---
+
+## Problema 5 — La guida sbagliava la definizione delle fasi
+
+- **Problema:** `PARTICIPANT_GUIDE.md` presenta la Fase 1 come «Act 1» e afferma che gli atti sono
+  soltanto due (lo ripete anche il `README.md`: «nessun terzo atto»). La definizione corretta,
+  confermata dall'organizzazione, è: **Fase 1 = act 1 + act 2**, **Fase 2 = act 1 + 2 + 3 + 4**.
+- **Com'è stato risolto:** niente da rifare. La Fase 1 era già stata misurata sull'intero manifest,
+  cioè esattamente su act 1 + act 2: `pre_opt`, E1, E6, E1+E6 e `post_opt` hanno tutti girato sui 15
+  documenti. Il flag `--act` esisteva ma non è stato usato in nessun run ufficiale. Corretta solo la
+  dicitura «corpus completo», che valeva per la Fase 1 e non per la gara.
+- **Cosa ho imparato:** vale la pena verificare l'ipotesi sul corpus *prima* di misurare. Le domande
+  del round 1 lo dicevano già da sole — cinque su otto citano documenti di act 2 — e questa è stata
+  la prova che ha smentito la lettura «solo Act 1» della guida.
+
+### Il vero blocco della Fase 2: act 3 e act 4 non sono nel manifest
+
+Il commit `8665e52` («data: add new acts») aggiunge 16 file — 9 in `data/act_3`, 7 in `data/act_4` —
+ma **non tocca `data/manifest.json`**, che dichiara ancora `available_acts: [1, 2]` e 15 documenti.
+Per le regole del progetto quei file non esistono: `iter_ingest_files()` legge il manifest, quindi
+l'ingest li salta, e un `document_id` che li citasse farebbe fallire la validazione della
+submission. Nemmeno `data/checksums.sha256` (15 righe) e `data/license_manifest.csv` (15 righe) li
+coprono. Finché non si installa il release pack ufficiale, la Fase 2 non può iniziare.
+
+Ricognizione fatta sui nuovi file (con `docling_parse`, senza ingest):
+
+| Cartella | File | Layer di testo |
+| --- | --- | --- |
+| `act_3` | 4 PDF (`agenda_incontri_01`, `lettera_porti_feudi_01`, `movimenti_diplomatici_01`, `registro_passaggio_01`) | sì, nativi |
+| `act_3` | 5 PNG (mappa Sicilia, mappa porti annotata, lettera danneggiata, manifesto politico, scansione manoscritta) | no: immagini pure, servono OCR e ragionamento su mappe |
+| `act_4` | 7 PDF (propaganda, bozza v1 vs nota v2, fonte dannosa, lettera allusiva, nota diplomatica incompleta, testimonianza contestata) | sì, ma tre hanno immagini incorporate |
+
+### Set di regressione della Fase 1, verificato
+
+Quando il corpus crescerà, il confronto con i numeri di oggi resta possibile: `--act 1 2` ricostruisce
+esattamente il corpus di Fase 1 in una collection separata (`caso_dei_mille_act12`, 174 chunk) e
+riproduce il `post_opt` metrica per metrica (recall 0,952, precision 0,571, hit 1,000, MRR 0,886).
+
+```bash
+python baseline_naive_rag.py --questions eval/questions_round_1.json --round-id round_1 --act 1 2 \
+  --qdrant-path outputs/qdrant_act12 --output outputs/round1/regressione_act12.json --rebuild
+python score_submission.py --submission outputs/round1/regressione_act12.json \
+  --annotations eval/annotations_round_1.json --baseline outputs/round1/submission_round_1_post_opt.json
+```

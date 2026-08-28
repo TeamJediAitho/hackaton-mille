@@ -13,8 +13,10 @@ generation *without breaking the submission contract*.
   file, driven by `argparse`.
 * Stack: `datapizza-ai` (`DagPipeline`), `OpenAIEmbedder` (`text-embedding-3-small`, 1536 dim),
   local Qdrant under `outputs/qdrant`, `DoclingParser` for PDFs.
-* Corpus: `data/act_1/` and `data/act_2/`. Act 2 is the hard one — scans, maps, propaganda,
-  conflicting versions. There is no act 3: the Gold Run asks new questions over the same archive.
+* Corpus: `data/act_1/` … `data/act_4/`. **Phase 1 works on acts 1+2; phase 2 on acts 1-4.**
+  (The participant guide and `README.md` still claim there are only two acts — that is wrong; the
+  organisers corrected it.) Later acts are the hard ones — scans, maps, image-only PNGs, propaganda,
+  competing versions of the same document. The Gold Run asks new questions over the same archive.
 * `data/manifest.json` is the **source of truth**. A file in `data/` that is not in the manifest
   does not exist for ingest, indexing or `document_id` validation.
 
@@ -33,11 +35,11 @@ These are the authoritative reference for the competition: when this file and th
 | Path | Purpose |
 | --- | --- |
 | `baseline_naive_rag.py` | Entrypoint: ingest, RAG, submission write + validate |
-| `data/act_1/`, `data/act_2/` | The archive documents |
+| `data/act_1/` … `data/act_4/` | The archive documents; only what the manifest lists is real |
 | `data/manifest.json` | Mandatory catalogue; validates `document_id` |
 | `data/checksums.sha256`, `data/license_manifest.csv` | Integrity and source licences |
 | `eval/` | `sample_questions.json`, `sample_annotations.json`, submission example + JSON schema |
-| `scripts/install_release.py` | Installs an Act 2 release pack and updates the manifest |
+| `scripts/install_release.py` | Installs a release pack and merges its documents into the manifest |
 | `outputs/` | Qdrant index and submissions — generated, not versioned |
 | `tests/test_submission_schema.py` | Submission contract tests |
 | `TEAM_NOTES.md` | Problem / fix / lesson log, one block per problem |
@@ -72,7 +74,7 @@ python baseline_naive_rag.py --validate-only \
 ```
 
 `--rebuild` is all-or-nothing: it deletes the Qdrant collection and reprocesses the whole archive.
-Use it after changing chunking/embedding/ingest logic or after installing Act 2 — **not** for new
+Use it after changing chunking/embedding/ingest logic or after installing a release pack — **not** for new
 questions or prompt-only changes.
 
 ### Submission contract — do not break
