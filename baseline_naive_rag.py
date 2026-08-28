@@ -23,7 +23,9 @@ import hashlib
 import json
 import os
 import shutil
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Literal
 
@@ -217,6 +219,12 @@ DIGITAL_MODALITIES = {"text", "table"}
 FORCE_OCR_ALL = os.getenv("FORCE_OCR_ALL") == "1"
 CHUNK_MAX_CHAR = int(os.getenv("CHUNK_MAX_CHAR", "1024"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "128"))
+# L'ingest e' dominato dal parsing Docling (l'OCR delle scansioni): i file vengono
+# processati in parallelo con un worker per thread. Ogni worker tiene le proprie
+# pipeline (il DocumentConverter di Docling non e' thread-safe). Le scritture su
+# Qdrant restano sul thread main per evitare upsert concorrenti sul client locale.
+# INGEST_WORKERS=1 ripristina l'esecuzione sequenziale, utile per gli A/B.
+INGEST_WORKERS = int(os.getenv("INGEST_WORKERS", "4"))
 
 
 def build_splitter():
@@ -330,28 +338,46 @@ def ingest_corpus(
         vector_config=[VectorConfig(dimensions=EMBEDDING_DIM, name=EMB_NAME)],
     )
 
-
-    def pipeline(ocr: bool):
+    def build_ingest_pipeline(ocr: bool):
         return IngestionPipeline(
             modules=[
                 build_parser(ocr),
                 build_splitter(),
                 ChunkEmbedder(client=embedder, embedding_name=EMB_NAME),
             ],
-            vector_store=vector_store,
-            collection_name=collection,
         )
 
-    ingestion = {False: pipeline(False), True: pipeline(True)}
-    for path, document_id, modality in files:
+    workers = min(INGEST_WORKERS, len(files), os.cpu_count() or 1)
+    local = threading.local()
+    started = time.perf_counter()
+
+    def ingest_one(path: Path, document_id: str, modality: str):
         needs_ocr = FORCE_OCR_ALL or modality not in DIGITAL_MODALITIES
-        ingestion[needs_ocr].run(
-            file_path=str(path),
-            metadata={"document_id": document_id, "source_file": path.name},
-        )
+        pipelines = getattr(local, "pipelines", None)
+        if pipelines is None:
+            pipelines = local.pipelines = {}
+        if needs_ocr not in pipelines:
+            pipelines[needs_ocr] = build_ingest_pipeline(needs_ocr)
+        return document_id, needs_ocr, pipelines[needs_ocr].run(file_path=str(path))
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = [
+            pool.submit(ingest_one, path, document_id, modality)
+            for path, document_id, modality in files
+        ]
+        results = [future.result() for future in futures]
+
+    all_chunks = []
+    for (path, document_id, _), (_, needs_ocr, chunks) in zip(files, results, strict=True):
+        for chunk in chunks:
+            chunk.metadata.update({"document_id": document_id, "source_file": path.name})
+        all_chunks.extend(chunks)
         print(f"ingest: {document_id} <- {path.name} (ocr={'on' if needs_ocr else 'off'})")
+    if all_chunks:
+        vector_store.add(all_chunks, collection)
+    elapsed = time.perf_counter() - started
     n_chunk = len(list(vector_store.dump_collection(collection)))
-    print(f"Ingest completato: {n_chunk} chunk in '{collection}'")
+    print(f"Ingest completato in {elapsed:.1f}s: {n_chunk} chunk in '{collection}' ({workers} worker)")
     return vector_store
 
 
