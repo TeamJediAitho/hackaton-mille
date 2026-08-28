@@ -1,0 +1,422 @@
+{
+  "round_id": "round_2",
+  "annotation_source": "team (non ufficiale): etichette scritte dal team sulle domande UFFICIALI del round 2 (eval/questions_round_2.json), leggendo il testo estratto dai documenti del manifest (act 1-4). Servono a misurare il retrieval in locale; non provengono dalla piattaforma e non sostituiscono la valutazione ufficiale.",
+  "questions": [
+    {
+      "question_id": "R2_Q001",
+      "question": "Come si incrociano l’agenda degli incontri e il registro dei passaggi nella vicenda dei dodici carri?",
+      "type": "cross_document",
+      "difficulty": "medium",
+      "expected_answer": "Il taccuino di casa Sant'Elia annota il 7 maggio «Dodici carri, nessuna firma» a proposito delle forniture di grano di Lo Bianco, e il 10 maggio l'indicazione di spostare a Mazara ed evitare il molo. Il registro dei lasciapassare riscontra il movimento al numero P-47, il 10 maggio: dodici carri della casa Sant'Elia sull'itinerario Trapani-Mazara, con autorizzazione verbale e nessuna copia scritta allegata. I due documenti si confermano su numero, data e direzione; entrambi registrano l'assenza di un atto scritto.",
+      "relevant_sources": [
+        "agenda_incontri_01",
+        "registro_passaggio_01"
+      ],
+      "acceptable_sources": [
+        "scansione_manoscritta_01",
+        "lettera_salina_01",
+        "mappa_porti_occidentali_annotata_01"
+      ],
+      "distractor_sources": [
+        "garib_d08",
+        "movimenti_diplomatici_01"
+      ],
+      "harmful_if_unqualified": [],
+      "forbidden_claims": [
+        "autorizzazione scritta",
+        "ordine firmato"
+      ],
+      "requires_abstention": false,
+      "required_facts": [
+        [
+          "dodici",
+          "12"
+        ],
+        [
+          "mazara"
+        ],
+        [
+          "verbale",
+          "nessuna firma",
+          "senza firma"
+        ]
+      ],
+      "uncertainty_required": false,
+      "judge_notes": "Cross-document: servono due fonti nei primi cinque contesti. Il punto storico è che i due registri concordano proprio sull'assenza di un atto scritto."
+    },
+    {
+      "question_id": "R2_Q002",
+      "question": "Il registro dei movimenti diplomatici conferma il corriere citato dal console? Con quali limiti?",
+      "type": "cross_document",
+      "difficulty": "medium",
+      "expected_answer": "Sì, sul movimento: il registro annota il 9 maggio il «Corriere Hamilton» da Trapani a Marsala per orari dei bastimenti, e nota che corrisponde alla finestra temporale del dispaccio. Il dispaccio consolare riferisce lo stesso viaggio, con ragione dichiarata di posta commerciale. I limiti sono due: entrambe le fonti registrano il motivo dichiarato, non il contenuto della comunicazione, e il console stesso scrive di non poter escludere che una comunicazione commerciale sia stata adoperata da terzi per altri fini, senza che ne consegua che il corriere portasse ordini politici.",
+      "relevant_sources": [
+        "movimenti_diplomatici_01",
+        "dispaccio_console_inglese_01"
+      ],
+      "acceptable_sources": [
+        "giornale_liberale_01",
+        "registro_passaggio_01"
+      ],
+      "distractor_sources": [
+        "fonte_dannosa_senza_qualifica_01",
+        "testimonianza_contestata_lanza_01"
+      ],
+      "harmful_if_unqualified": [
+        "fonte_dannosa_senza_qualifica_01"
+      ],
+      "forbidden_claims": [
+        "il corriere portava ordini politici",
+        "ordini di natura politica"
+      ],
+      "requires_abstention": false,
+      "required_facts": [
+        [
+          "9 maggio"
+        ],
+        [
+          "commercial",
+          "posta commerciale",
+          "orari"
+        ],
+        [
+          "non",
+          "limite",
+          "limiti"
+        ]
+      ],
+      "uncertainty_required": true,
+      "judge_notes": "La risposta corretta separa «il movimento è confermato» da «il contenuto non lo è». Conferma del fatto, non della sostanza."
+    },
+    {
+      "question_id": "R2_Q003",
+      "question": "Quale direttrice mostra la carta annotata e come dialoga con la lettera sui porti e i feudi?",
+      "type": "map_based",
+      "difficulty": "medium",
+      "expected_answer": "La carta mostra la direttrice Palermo-Trapani lungo la costa occidentale, con una strada secondaria, un faro a luce ridotta sorvegliata nella fascia oraria 22-24 e il deposito Lo Bianco con dodici carri. La lettera sui porti e i feudi chiede esattamente le stesse cose a parole: che i magazzini di Lo Bianco figurino pieni di granaglie, che le strade secondarie non vengano chiuse e che il faro non richiami curiosi fra le dieci e la mezzanotte. La carta è una annotazione didattica simulata e l'OCR ne restituisce le etichette, non le relazioni spaziali.",
+      "relevant_sources": [
+        "mappa_porti_occidentali_annotata_01",
+        "lettera_porti_feudi_01"
+      ],
+      "acceptable_sources": [
+        "scansione_manoscritta_01",
+        "registro_passaggio_01",
+        "scheda_luoghi_chiave_01"
+      ],
+      "distractor_sources": [
+        "mappa_geografica_semplice_01",
+        "Sicily_location_map_960px"
+      ],
+      "harmful_if_unqualified": [],
+      "forbidden_claims": [],
+      "requires_abstention": false,
+      "required_facts": [
+        [
+          "faro"
+        ],
+        [
+          "strada secondaria",
+          "strade secondarie"
+        ],
+        [
+          "lo bianco"
+        ]
+      ],
+      "uncertainty_required": true,
+      "judge_notes": "Famiglia mappa + cross-document. La corrispondenza fra annotazione grafica e istruzione scritta è il contenuto storico; la geografia esatta non è ricavabile dall'OCR e va dichiarato."
+    },
+    {
+      "question_id": "R2_Q004",
+      "question": "Che cosa indicano le regioni A, B e C della mappa annotata?",
+      "type": "map_based",
+      "difficulty": "easy",
+      "expected_answer": "Secondo le annotazioni della carta: A è il faro a luce ridotta sorvegliata, con l'indicazione oraria 22-24; B è il deposito Lo Bianco con dodici carri; C è associato alla strada secondaria. Le etichette provengono dall'OCR di una carta didattica simulata: l'abbinamento fra lettera e punto sulla mappa è ricostruito dal testo estratto, non da una lettura della grafica.",
+      "relevant_sources": [
+        "mappa_porti_occidentali_annotata_01"
+      ],
+      "acceptable_sources": [
+        "lettera_porti_feudi_01",
+        "registro_passaggio_01",
+        "scansione_manoscritta_01"
+      ],
+      "distractor_sources": [
+        "mappa_geografica_semplice_01",
+        "Sicily_location_map_960px"
+      ],
+      "harmful_if_unqualified": [],
+      "forbidden_claims": [],
+      "requires_abstention": false,
+      "required_facts": [
+        [
+          "faro"
+        ],
+        [
+          "lo bianco"
+        ],
+        [
+          "strada secondaria"
+        ]
+      ],
+      "uncertainty_required": true,
+      "judge_notes": "Domanda dichiarata «easy» ma dipende interamente dall'OCR di un PNG: se l'immagine non entra nell'indice non c'è risposta. L'OCR rende «luce ridotl» invece di «luce ridotta» — rumore da non correggere in silenzio."
+    },
+    {
+      "question_id": "R2_Q005",
+      "question": "Quali istruzioni contiene il promemoria manoscritto sui carri e sul faro?",
+      "type": "factual",
+      "difficulty": "medium",
+      "expected_answer": "Il promemoria, non firmato e datato 10 maggio ore ventuno, riferisce che il signor T. chiede che i dodici carri siano tenuti a Mazara e non al molo, senza alcun ordine scritto, e che Lo Bianco riceverà il segnale dalla casa Sant'Elia. Sul faro: potrà restare a luce ridotta fra le ventidue e la mezzanotte, non oltre, evitando che una precauzione sembri una promessa.",
+      "relevant_sources": [
+        "scansione_manoscritta_01"
+      ],
+      "acceptable_sources": [
+        "lettera_porti_feudi_01",
+        "agenda_incontri_01",
+        "mappa_porti_occidentali_annotata_01",
+        "registro_passaggio_01"
+      ],
+      "distractor_sources": [
+        "lettera_salina_01"
+      ],
+      "harmful_if_unqualified": [],
+      "forbidden_claims": [
+        "esiste un ordine scritto",
+        "per ordine scritto",
+        "documento firmato"
+      ],
+      "requires_abstention": false,
+      "required_facts": [
+        [
+          "mazara"
+        ],
+        [
+          "dodici",
+          "12"
+        ],
+        [
+          "faro"
+        ],
+        [
+          "luce ridotta",
+          "luce"
+        ]
+      ],
+      "uncertainty_required": false,
+      "judge_notes": "Famiglia solo-immagine: il fatto esiste unicamente nel PNG. Il promemoria non è firmato: la risposta non deve presentarlo come un ordine."
+    },
+    {
+      "question_id": "R2_Q006",
+      "question": "In che modo la nota aggiornata modifica la bozza del comitato?",
+      "type": "contradiction",
+      "difficulty": "medium",
+      "expected_answer": "La minuta del 12 maggio dava per «raggiunto» un accordo con i notabili dell'occidente, annotandolo però a matita con un punto interrogativo e avvertendo che la frase non andava riprodotta senza riscontro. La nota di rettifica del 14 maggio cancella quell'espressione e la sostituisce con «convergenza prudenziale non formalizzata», rilevando che mancano firme, verbali sottoscritti e mandati comuni. La rettifica non esclude che intese più precise siano esistite: dichiara che nel fascicolo non sono provate. La bozza resta un documento valido, perché registra ciò che il comitato credeva il 12 maggio.",
+      "relevant_sources": [
+        "bozza_comitato_palermo_v1",
+        "nota_comitato_palermo_v2"
+      ],
+      "acceptable_sources": [
+        "nota_funzionario_borbonico_01",
+        "agenda_incontri_01"
+      ],
+      "distractor_sources": [
+        "articolo_propaganda_01",
+        "testimonianza_contestata_lanza_01"
+      ],
+      "harmful_if_unqualified": [
+        "bozza_comitato_palermo_v1"
+      ],
+      "forbidden_claims": [
+        "accordo formale provato",
+        "il comitato conferma l'accordo raggiunto"
+      ],
+      "requires_abstention": false,
+      "required_facts": [
+        [
+          "accordo raggiunto",
+          "raggiunto un accordo",
+          "dato per raggiunto"
+        ],
+        [
+          "convergenza prudenziale"
+        ],
+        [
+          "14 maggio"
+        ]
+      ],
+      "uncertainty_required": true,
+      "judge_notes": "Conflitto di versione: entrambe sono relevant, quindi il recall misura da solo se il retrieval le porta tutte e due. La versione aggiornata non cancella il valore documentario della bozza."
+    },
+    {
+      "question_id": "R2_Q007",
+      "question": "Perché la testimonianza di Lanza non può essere usata come prova certa?",
+      "type": "contradiction",
+      "difficulty": "hard",
+      "expected_answer": "Perché il verbale stesso ne dichiara i limiti: è reso nel 1882, ventidue anni dopo i fatti; il dichiarante non fu presente alla consegna della garanzia britannica e la riferisce per sentito dire; non ricorda la data né i nomi delle persone da cui apprese la notizia; non possiede lettere, ordini o note dell'epoca a sostegno. Il raffronto allegato mostra inoltre che il dispaccio consolare, contemporaneo e firmato, nega esplicitamente la garanzia, e che la nota di rettifica del comitato non rinviene prova dell'accordo.",
+      "relevant_sources": [
+        "testimonianza_contestata_lanza_01"
+      ],
+      "acceptable_sources": [
+        "dispaccio_console_inglese_01",
+        "nota_comitato_palermo_v2",
+        "fonte_dannosa_senza_qualifica_01"
+      ],
+      "distractor_sources": [
+        "articolo_propaganda_01"
+      ],
+      "harmful_if_unqualified": [
+        "testimonianza_contestata_lanza_01"
+      ],
+      "forbidden_claims": [
+        "il console aveva garantito lo sbarco",
+        "l'accordo dei notabili e provato"
+      ],
+      "requires_abstention": false,
+      "required_facts": [
+        [
+          "ventidue",
+          "22"
+        ],
+        [
+          "non fui presente",
+          "non ricorda",
+          "non ne ho",
+          "disperse",
+          "prove documentali",
+          "supporto documentale",
+          "nessun documento",
+          "senza documenti",
+          "non possiede",
+          "non era presente",
+          "non fu presente",
+          "sentito dire",
+          "per sentito dire"
+        ]
+      ],
+      "uncertainty_required": true,
+      "judge_notes": "Il documento contiene già la propria confutazione: la risposta migliore cita i limiti dichiarati nel verbale, non un giudizio esterno."
+    },
+    {
+      "question_id": "R2_Q008",
+      "question": "L’archivio dimostra che la marina britannica garantì la sicurezza dello sbarco?",
+      "type": "insufficient_evidence",
+      "difficulty": "hard",
+      "expected_answer": "No. Il dispaccio consolare del 10 maggio è esplicito: non fu impartito alcun ordine di protezione a favore di forze irregolari né concessa garanzia d'intervento, e se la presenza di bandiere mercantili britanniche fu interpretata localmente come promessa di sicurezza, quell'interpretazione non ha origine in istruzioni del consolato. L'affermazione contraria compare solo in una copia anonima che riferisce voci di porto e in una testimonianza resa ventidue anni dopo da chi dichiara di non essere stato presente. La lettera danneggiata conferma che il console non aveva promesso protezione.",
+      "relevant_sources": [],
+      "acceptable_sources": [
+        "dispaccio_console_inglese_01",
+        "fonte_dannosa_senza_qualifica_01",
+        "testimonianza_contestata_lanza_01",
+        "lettera_danneggiata_01"
+      ],
+      "distractor_sources": [
+        "giornale_liberale_01",
+        "articolo_propaganda_01"
+      ],
+      "harmful_if_unqualified": [
+        "fonte_dannosa_senza_qualifica_01",
+        "testimonianza_contestata_lanza_01"
+      ],
+      "forbidden_claims": [
+        "la marina britannica garanti",
+        "garanzia scritta consegnata",
+        "il console ha consegnato una garanzia"
+      ],
+      "requires_abstention": true,
+      "required_facts": [],
+      "uncertainty_required": true,
+      "judge_notes": "Domanda di assenza di prova: nessun relevant_source, quindi esclusa da recall e MRR e conta nel dont_know_rate. Vale sia la formula esatta sia una negazione ragionata («l'archivio non lo dimostra»), purché non affermi i forbidden_claims."
+    },
+    {
+      "question_id": "R2_Q009",
+      "question": "Che cosa possiamo sostenere sul consenso popolare confrontando i tre testi propagandistici?",
+      "type": "contradiction",
+      "difficulty": "hard",
+      "expected_answer": "Che i tre fogli descrivono lo stesso evento in modi incompatibili e nessuno di essi è una misura del consenso. Il foglio liberale del 13 maggio 1860 dà il consenso per «già compiuto» e riconduce anche l'attesa dietro le persiane all'entusiasmo; il foglio borbonico presenta gli arrivati come avventurieri forestieri che non rappresentano la volontà del popolo e invita a distinguere il clamore di pochi dal sentimento dell'isola; il numero commemorativo del marzo 1861 rilegge a posteriori la prudenza come disciplina e dichiara l'unanimità. Sono tre fonti di parte, due contemporanee e in conflitto e una posteriore di quasi un anno: se ne ricava che il consenso fu oggetto di racconto, non che fosse unanime.",
+      "relevant_sources": [
+        "giornale_liberale_01",
+        "giornale_borbonico_01",
+        "articolo_propaganda_01"
+      ],
+      "acceptable_sources": [
+        "manifesto_politico_01",
+        "lettera_allusiva_donnafugata_01",
+        "nota_funzionario_borbonico_01"
+      ],
+      "distractor_sources": [
+        "cronologia_ufficiale_01"
+      ],
+      "harmful_if_unqualified": [
+        "giornale_liberale_01",
+        "giornale_borbonico_01",
+        "articolo_propaganda_01",
+        "manifesto_politico_01"
+      ],
+      "forbidden_claims": [
+        "la popolazione era unanime",
+        "il consenso era gia compiuto",
+        "ogni citta era pronta"
+      ],
+      "requires_abstention": false,
+      "required_facts": [
+        [
+          "di parte",
+          "propaganda",
+          "celebrativ",
+          "non e una misura",
+          "non prova"
+        ]
+      ],
+      "uncertainty_required": true,
+      "judge_notes": "Quali siano «i tre» non è indicato dalla domanda: qui contano i tre con reliability propaganda che parlano di consenso popolare, con il manifesto fra le acceptable. Il punto misurato è che nessuna delle tre venga ripetuta come descrizione dei fatti."
+    },
+    {
+      "question_id": "R2_Q010",
+      "question": "Qual è la tesi più forte sostenibile sul comportamento delle élite, senza oltrepassare le fonti?",
+      "type": "synthesis",
+      "difficulty": "hard",
+      "expected_answer": "Che le case influenti si prepararono a muoversi senza impegnarsi: predisposero carri, magazzini e strade sotto forme commerciali e private, evitando ogni atto scritto che potesse essere letto come adesione politica. Lo dicono la lettera di Salina, la lettera sui porti e i feudi, il taccuino con «dodici carri, nessuna firma», il registro con l'autorizzazione verbale e senza copia. La formula più forte che le carte reggono è quella della nota di rettifica del comitato: una convergenza prudenziale non formalizzata. Non regge invece la tesi dell'accordo: mancano firme, verbali e mandati comuni.",
+      "relevant_sources": [
+        "nota_comitato_palermo_v2",
+        "lettera_salina_01",
+        "lettera_porti_feudi_01"
+      ],
+      "acceptable_sources": [
+        "agenda_incontri_01",
+        "registro_passaggio_01",
+        "bozza_comitato_palermo_v1",
+        "lettera_allusiva_donnafugata_01",
+        "nota_funzionario_borbonico_01",
+        "dossier_introduttivo_01"
+      ],
+      "distractor_sources": [
+        "articolo_propaganda_01",
+        "testimonianza_contestata_lanza_01"
+      ],
+      "harmful_if_unqualified": [
+        "testimonianza_contestata_lanza_01",
+        "articolo_propaganda_01"
+      ],
+      "forbidden_claims": [
+        "accordo formale provato",
+        "le elite avevano un patto",
+        "l'accordo e dimostrato"
+      ],
+      "requires_abstention": false,
+      "required_facts": [
+        [
+          "convergenza prudenziale",
+          "non formalizzat",
+          "senza impegn",
+          "nessun impegno scritto"
+        ],
+        [
+          "non",
+          "manca",
+          "mancano"
+        ]
+      ],
+      "uncertainty_required": true,
+      "judge_notes": "Sintesi: si misura la prudenza. La tesi va sostenuta con le carte e delimitata da ciò che le carte non provano; citare la testimonianza del 1882 o il foglio del 1861 senza qualificarli è l'errore da intercettare."
+    }
+  ]
+}

@@ -16,8 +16,10 @@ score:
 		--submission outputs/round1/submission_round_1_pre_opt.json \
 		--annotations eval/annotations_round_1.json
 
-# Set di regressione della Fase 1: ricostruisce act 1+2 in una collection separata e confronta
-# con la submission congelata del round 1. Soglie: recall@5 >= 0,952 e MRR >= 0,886.
+# Set di regressione della Fase 1: ricostruisce act 1+2 in una collection separata e misura le
+# stesse 8 domande del round 1. Soglie dichiarate nel piano: recall@5 >= 0,952 e MRR >= 0,886.
+# Niente --baseline: submission_round_1_post_opt.json non e' su disco (outputs/ e' gitignorato) e
+# nessuna submission archiviata riproduce MRR 0,886 - si misura contro le soglie assolute.
 regression:
 	$(PYTHON) baseline_naive_rag.py \
 		--questions eval/questions_round_1.json \
@@ -29,7 +31,6 @@ regression:
 	$(PYTHON) score_submission.py \
 		--submission outputs/round1/regressione_act12.json \
 		--annotations eval/annotations_round_1.json \
-		--baseline outputs/round1/submission_round_1_post_opt.json \
 		--verify-contexts
 
 test:
