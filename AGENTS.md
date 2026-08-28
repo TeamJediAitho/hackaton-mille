@@ -17,7 +17,9 @@ generation *without breaking the submission contract*.
   (The participant guide and `README.md` still claim there are only two acts — that is wrong; the
   organisers corrected it.) Later acts are the hard ones — scans, maps, image-only PNGs, propaganda,
   competing versions of the same document. The Gold Run asks new questions over the same archive.
-* `data/manifest.json` is the **source of truth**. A file in `data/` that is not in the manifest
+* `data/manifest.json` is the **source of truth**. The act 3-4 entries were written by the team
+  (`metadata_source: team_inferred`) because no official release pack was available; installing one
+  with `scripts/install_release.py` overwrites them by `document_id`. A file in `data/` that is not in the manifest
   does not exist for ingest, indexing or `document_id` validation.
 
 ### Layout

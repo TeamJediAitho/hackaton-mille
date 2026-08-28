@@ -1,0 +1,66 @@
+{
+    "round_id": "round_2",
+    "question_count": 10,
+    "questions": [
+        {
+            "question_id": "R2_Q001",
+            "question": "Come si incrociano l’agenda degli incontri e il registro dei passaggi nella vicenda dei dodici carri?",
+            "type": "cross_document",
+            "difficulty": "medium"
+        },
+        {
+            "question_id": "R2_Q002",
+            "question": "Il registro dei movimenti diplomatici conferma il corriere citato dal console? Con quali limiti?",
+            "type": "cross_document",
+            "difficulty": "medium"
+        },
+        {
+            "question_id": "R2_Q003",
+            "question": "Quale direttrice mostra la carta annotata e come dialoga con la lettera sui porti e i feudi?",
+            "type": "map_based",
+            "difficulty": "medium"
+        },
+        {
+            "question_id": "R2_Q004",
+            "question": "Che cosa indicano le regioni A, B e C della mappa annotata?",
+            "type": "map_based",
+            "difficulty": "easy"
+        },
+        {
+            "question_id": "R2_Q005",
+            "question": "Quali istruzioni contiene il promemoria manoscritto sui carri e sul faro?",
+            "type": "factual",
+            "difficulty": "medium"
+        },
+        {
+            "question_id": "R2_Q006",
+            "question": "In che modo la nota aggiornata modifica la bozza del comitato?",
+            "type": "contradiction",
+            "difficulty": "medium"
+        },
+        {
+            "question_id": "R2_Q007",
+            "question": "Perché la testimonianza di Lanza non può essere usata come prova certa?",
+            "type": "contradiction",
+            "difficulty": "hard"
+        },
+        {
+            "question_id": "R2_Q008",
+            "question": "L’archivio dimostra che la marina britannica garantì la sicurezza dello sbarco?",
+            "type": "insufficient_evidence",
+            "difficulty": "hard"
+        },
+        {
+            "question_id": "R2_Q009",
+            "question": "Che cosa possiamo sostenere sul consenso popolare confrontando i tre testi propagandistici?",
+            "type": "contradiction",
+            "difficulty": "hard"
+        },
+        {
+            "question_id": "R2_Q010",
+            "question": "Qual è la tesi più forte sostenibile sul comportamento delle élite, senza oltrepassare le fonti?",
+            "type": "synthesis",
+            "difficulty": "hard"
+        }
+    ]
+}

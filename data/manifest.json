@@ -4,7 +4,9 @@
   "track": "experts",
   "available_acts": [
     1,
-    2
+    2,
+    3,
+    4
   ],
   "documents": [
     {
@@ -229,6 +231,262 @@
           "path": "data/act_2/nota_funzionario_borbonico_01.pdf",
           "sha256": "9e8fb74898221042cb8670d113de0d4a05aadf0d81740d4f8d7cc3a0cd604cf4",
           "bytes": 3789
+        }
+      ]
+    },
+    {
+      "document_id": "Sicily_location_map_960px",
+      "title": "Mappa di localizzazione della Sicilia",
+      "act": 3,
+      "origin_type": "derived",
+      "modality": "map",
+      "reliability": "reference",
+      "metadata_source": "team_inferred",
+      "file_records": [
+        {
+          "path": "data/act_3/Sicily_location_map_960px.png",
+          "sha256": "11bfc2075d7ae559775bc9ffec1a475090156c5a3376b6d2f30065d316518659",
+          "bytes": 100053
+        }
+      ]
+    },
+    {
+      "document_id": "agenda_incontri_01",
+      "title": "Estratto dal taccuino della casa Sant'Elia",
+      "act": 3,
+      "origin_type": "simulated",
+      "modality": "table",
+      "reliability": "partial",
+      "metadata_source": "team_inferred",
+      "file_records": [
+        {
+          "path": "data/act_3/agenda_incontri_01.pdf",
+          "sha256": "6594ebfe62c6b2a69accc6a18a5b93415cec209d54d7777fbbf9119804c68790",
+          "bytes": 3487
+        }
+      ]
+    },
+    {
+      "document_id": "lettera_danneggiata_01",
+      "title": "Lettera danneggiata, copia simulata",
+      "act": 3,
+      "origin_type": "simulated",
+      "modality": "scan",
+      "reliability": "partial",
+      "metadata_source": "team_inferred",
+      "file_records": [
+        {
+          "path": "data/act_3/lettera_danneggiata_01.png",
+          "sha256": "848825b1324678ae3a6e83ebe984ee2fc5812884dfb07222f544257441447142",
+          "bytes": 1074925
+        }
+      ]
+    },
+    {
+      "document_id": "lettera_porti_feudi_01",
+      "title": "Lettera sulle disposizioni ai porti e ai feudi",
+      "act": 3,
+      "origin_type": "simulated",
+      "modality": "text",
+      "reliability": "allusive",
+      "metadata_source": "team_inferred",
+      "file_records": [
+        {
+          "path": "data/act_3/lettera_porti_feudi_01.pdf",
+          "sha256": "8ded0a6839970a5393ffd8fffb6269f1397fd6f73487451a8a711a2b0f0f5cc1",
+          "bytes": 3240
+        }
+      ]
+    },
+    {
+      "document_id": "manifesto_politico_01",
+      "title": "Manifesto politico «Siciliani!»",
+      "act": 3,
+      "origin_type": "simulated",
+      "modality": "scan",
+      "reliability": "propaganda",
+      "metadata_source": "team_inferred",
+      "file_records": [
+        {
+          "path": "data/act_3/manifesto_politico_01.png",
+          "sha256": "5346c6b8565f15e521d3fb102c88787e689882df95e43d0b665f29737fb0407d",
+          "bytes": 64858
+        }
+      ]
+    },
+    {
+      "document_id": "mappa_porti_occidentali_annotata_01",
+      "title": "Carta didattica della Sicilia occidentale, annotata",
+      "act": 3,
+      "origin_type": "derived",
+      "modality": "map",
+      "reliability": "reference",
+      "metadata_source": "team_inferred",
+      "file_records": [
+        {
+          "path": "data/act_3/mappa_porti_occidentali_annotata_01.png",
+          "sha256": "096a0d95a167302ad29339bbf6aecec578cd79bdc8948711d4c19d4a2c243afd",
+          "bytes": 104296
+        }
+      ]
+    },
+    {
+      "document_id": "movimenti_diplomatici_01",
+      "title": "Registro delle partenze e dei recapiti consolari",
+      "act": 3,
+      "origin_type": "simulated",
+      "modality": "table",
+      "reliability": "partial",
+      "metadata_source": "team_inferred",
+      "file_records": [
+        {
+          "path": "data/act_3/movimenti_diplomatici_01.pdf",
+          "sha256": "d2f1109e6151b2451e6392295e840747dfff628922d01ca0a1ea44984aa4eba6",
+          "bytes": 3428
+        }
+      ]
+    },
+    {
+      "document_id": "registro_passaggio_01",
+      "title": "Registro dei lasciapassare e dei carri",
+      "act": 3,
+      "origin_type": "simulated",
+      "modality": "table",
+      "reliability": "partial",
+      "metadata_source": "team_inferred",
+      "file_records": [
+        {
+          "path": "data/act_3/registro_passaggio_01.pdf",
+          "sha256": "05c556f026a16288430496c73db78881de86fb2875a3728e7cb21768cffc0d8a",
+          "bytes": 3398
+        }
+      ]
+    },
+    {
+      "document_id": "scansione_manoscritta_01",
+      "title": "Promemoria manoscritto non firmato",
+      "act": 3,
+      "origin_type": "simulated",
+      "modality": "scan",
+      "reliability": "partial",
+      "metadata_source": "team_inferred",
+      "file_records": [
+        {
+          "path": "data/act_3/scansione_manoscritta_01.png",
+          "sha256": "e522b92d9c26bb5b24af3f7e897ba50705f3ebb9f0ae51a75d45d9c1a74f5778",
+          "bytes": 1051952
+        }
+      ]
+    },
+    {
+      "document_id": "articolo_propaganda_01",
+      "title": "L'Isola unanime, numero commemorativo",
+      "act": 4,
+      "origin_type": "simulated",
+      "modality": "text",
+      "reliability": "propaganda",
+      "metadata_source": "team_inferred",
+      "file_records": [
+        {
+          "path": "data/act_4/articolo_propaganda_01.pdf",
+          "sha256": "012194e8e6c974b05e0658b15e94d95133414ec20fc95caa77269b1d0cce642b",
+          "bytes": 191892
+        }
+      ]
+    },
+    {
+      "document_id": "bozza_comitato_palermo_v1",
+      "title": "Comitato di Palermo, minuta del 12 maggio 1860",
+      "act": 4,
+      "origin_type": "simulated",
+      "modality": "text",
+      "reliability": "draft",
+      "metadata_source": "team_inferred",
+      "file_records": [
+        {
+          "path": "data/act_4/bozza_comitato_palermo_v1.pdf",
+          "sha256": "3e7a32c6957ecb9ee454a027d21819c9f0a40d6f9817e84da39c305e4da2472e",
+          "bytes": 3290
+        }
+      ]
+    },
+    {
+      "document_id": "fonte_dannosa_senza_qualifica_01",
+      "title": "Copia senza intestazione sulle garanzie britanniche",
+      "act": 4,
+      "origin_type": "simulated",
+      "modality": "text",
+      "reliability": "unverified_hearsay",
+      "metadata_source": "team_inferred",
+      "file_records": [
+        {
+          "path": "data/act_4/fonte_dannosa_senza_qualifica_01.pdf",
+          "sha256": "e14cd986dfa299353f551eaf74356e0ec105ff53e1c671d0a9816a384eaec480",
+          "bytes": 141455
+        }
+      ]
+    },
+    {
+      "document_id": "lettera_allusiva_donnafugata_01",
+      "title": "Lettera da Donnafugata del 16 maggio 1860",
+      "act": 4,
+      "origin_type": "simulated",
+      "modality": "text",
+      "reliability": "allusive",
+      "metadata_source": "team_inferred",
+      "file_records": [
+        {
+          "path": "data/act_4/lettera_allusiva_donnafugata_01.pdf",
+          "sha256": "532e384a1930036f7dcf039c651f8275c6b8fbd921dcdd56a833da1687404565",
+          "bytes": 236275
+        }
+      ]
+    },
+    {
+      "document_id": "nota_comitato_palermo_v2",
+      "title": "Comitato di Palermo, nota di rettifica del 14 maggio 1860",
+      "act": 4,
+      "origin_type": "simulated",
+      "modality": "text",
+      "reliability": "revised",
+      "metadata_source": "team_inferred",
+      "file_records": [
+        {
+          "path": "data/act_4/nota_comitato_palermo_v2.pdf",
+          "sha256": "bfa4215a03d32537ebf442d052d3603cd2b1da6c3674826905392441f307fdd8",
+          "bytes": 507301
+        }
+      ]
+    },
+    {
+      "document_id": "nota_diplomatica_incompleta_01",
+      "title": "Appunto per il dispaccio del 12 maggio, incompleto",
+      "act": 4,
+      "origin_type": "simulated",
+      "modality": "text",
+      "reliability": "partial",
+      "metadata_source": "team_inferred",
+      "file_records": [
+        {
+          "path": "data/act_4/nota_diplomatica_incompleta_01.pdf",
+          "sha256": "2e51ce0e35e76fba13220463793d138f663bb67293345db58411a4f46299b364",
+          "bytes": 115250
+        }
+      ]
+    },
+    {
+      "document_id": "testimonianza_contestata_lanza_01",
+      "title": "Verbale delle dichiarazioni del capitano L., 1882",
+      "act": 4,
+      "origin_type": "simulated",
+      "modality": "text",
+      "reliability": "contested",
+      "metadata_source": "team_inferred",
+      "file_records": [
+        {
+          "path": "data/act_4/testimonianza_contestata_lanza_01.pdf",
+          "sha256": "98a442a96c193a9d2714a810c92a3dfc9b6449bd943532c0dc1947092b09adc9",
+          "bytes": 54566
         }
       ]
     }

@@ -211,3 +211,292 @@ python baseline_naive_rag.py --questions eval/questions_round_1.json --round-id 
 python score_submission.py --submission outputs/round1/regressione_act12.json \
   --annotations eval/annotations_round_1.json --baseline outputs/round1/submission_round_1_post_opt.json
 ```
+
+---
+
+## Problema 6 — Il manifest non copriva act 3 e act 4, e il release pack non è arrivato
+
+- **Problema:** blocco descritto sopra. Senza le voci di manifest, i 16 file di `data/act_3` e
+  `data/act_4` non esistono per la pipeline.
+- **Com'è stato risolto:** il release pack ufficiale non era disponibile sul disco, quindi le voci
+  sono state **scritte da noi leggendo i documenti**, con `document_id` = nome del file (la
+  convenzione che tutte e 15 le voci precedenti rispettano). Ogni voce nuova porta
+  `"metadata_source": "team_inferred"`: quando arriva il pack ufficiale,
+  `python scripts/install_release.py <zip>` sovrascrive per `document_id` (`merge_manifest`) e il
+  marcatore sparisce da solo. Rigenerati anche `data/checksums.sha256` e
+  `data/license_manifest.csv`, che erano fermi a 15 righe.
+- **Etichette `reliability` inventate da noi** (il vocabolario del manifest non le prevedeva):
+  `draft` per `bozza_comitato_palermo_v1`, `revised` per `nota_comitato_palermo_v2`,
+  `unverified_hearsay` per `fonte_dannosa_senza_qualifica_01`, `contested` per
+  `testimonianza_contestata_lanza_01`. Alimentano il prompt in E5: sono un'interpretazione nostra,
+  non un dato ufficiale.
+- **Verifica:** `available_acts = [1, 2, 3, 4]`, 31 documenti, ogni `sha256` del manifest coincide
+  col file su disco (`sha256sum -c data/checksums.sha256` senza errori).
+
+---
+
+## Problema 7 — Un documento può entrare nell'indice senza portare testo
+
+- **Sintomo:** con l'ingest di act 3, `Sicily_location_map_960px.png` produce **1 chunk di 0
+  caratteri**. Entrava nell'indice, occupava un vettore, non poteva rispondere a niente, e nessun
+  messaggio lo diceva.
+- **Causa:** è una mappa di localizzazione senza annotazioni testuali: l'OCR non ha niente da
+  leggere. Il log dell'ingest contava solo il totale dei chunk della collection.
+- **Fix:** `ingest_corpus()` misura chunk **e caratteri** per documento e segnala chi entra sotto
+  `MUTE_DOCUMENT_CHARS` (40):
+
+  ```
+  ingest: manifesto_politico_01 <- manifesto_politico_01.png (ocr=on) -> 1 chunk, 144 caratteri
+  ATTENZIONE: 1 documenti sono entrati senza testo utile: Sicily_location_map_960px
+  ```
+
+- **Decisione:** tenere. Risponde direttamente alla richiesta della guida di separare «il testo non
+  è stato recuperato» da «recuperato ma interpretato male», e il documento muto è il candidato
+  naturale per un captioner (E7, non eseguito — vedi sotto).
+
+### Riga per documento problematico
+
+| document_id | modality | OCR | esito | nota |
+| --- | --- | --- | --- | --- |
+| `Sicily_location_map_960px` | map | EasyOCR | **0 caratteri** | mappa senza annotazioni: muta per il retrieval testuale |
+| `mappa_porti_occidentali_annotata_01` | map | EasyOCR | 215 caratteri | toponimi e annotazioni sì, relazioni spaziali no («faro: luce ridotl» = OCR rumoroso) |
+| `manifesto_politico_01` | scan | EasyOCR | 144 caratteri | testo breve ma pulito; accenti persi («LORA E VENUTA») |
+| `lettera_danneggiata_01` | scan | EasyOCR | 342 caratteri | leggibile; la lacuna è dichiarata nel documento stesso |
+| `scansione_manoscritta_01` | scan | EasyOCR | 356 caratteri | leggibile; qualche refuso OCR («0» al posto di «.») |
+| `garib_d08` | scan | EasyOCR | 94 536 caratteri | 113 chunk su 193: da solo è il 59% dell'indice |
+
+---
+
+## Problema 8 — I distrattori di act 3 e 4 costano recall sulle domande del round 1
+
+- **Ipotesi:** il corpus passa da 15 a 31 documenti, quindi più che raddoppiano i distrattori.
+- **Misura:** stesse 8 domande del round 1, stessa pipeline, solo il corpus cambia.
+
+  | corpus | recall@5 | precision@5 | hit@5 | MRR |
+  | --- | ---: | ---: | ---: | ---: |
+  | act 1+2 (15 doc, 174 chunk) | 0,952 | 0,571 | 1,000 | 0,886 |
+  | act 1-4 (31 doc, 214 chunk) | 0,810 | 0,429 | 0,857 | 0,786 |
+
+- **Caso riproducibile:** R1_Q003 passa da `GENERATION_FAIL` a `RETRIEVAL_FAIL` —
+  `lettera_salina_01` esce del tutto dai primi cinque, spinta fuori dai documenti nuovi.
+- **Cosa ho imparato:** è il numero più utile da raccontare. Non è la pipeline a essere peggiorata:
+  è il compito a essere diventato più difficile, e la misura lo quantifica.
+
+---
+
+## Problema 9 — Titoli e date isolati occupavano i contesti al posto delle prove (E9)
+
+- **Sintomo riproducibile:** R2_Q004 («il comitato ha dato per raggiunto un accordo?») rispondeva
+  **«Non lo so»** con `recall 1,00`: entrambe le versioni erano state recuperate.
+- **Causa:** i contesti erano quattro frammenti di intestazione, di cui due identici fra loro:
+
+  ```
+  1 bozza_comitato_palermo_v1  50 car.  «## COMITATO DI PALERMO - MINUTA DEL 12 MAGGIO 1860»
+  2 bozza_comitato_palermo_v1  50 car.  «## COMITATO DI PALERMO - MINUTA DEL 12 MAGGIO 1860»
+  3 lettera_salina_01          22 car.  «Palermo, 8 maggio 1860»
+  4 lettera_salina_01          22 car.  «Palermo, 8 maggio 1860»
+  5 nota_comitato_palermo_v2  318 car.
+  ```
+
+  Docling ripete le intestazioni di sezione e `RecursiveSplitter` le emette come chunk autonomi.
+  Corti e densi di parole chiave, vincono il confronto con una domanda breve: **4 slot su 5 sprecati**.
+- **Fix:** `SizedSplitter` scarta i chunk sotto `CHUNK_MIN_CHAR` (80) e deduplica i testi identici
+  all'interno del documento. 214 → 193 chunk.
+- **Prima/dopo (corpus act 1-4, gold round 2):**
+
+  | | recall@5 | precision@5 | hit@5 | MRR | astensioni indebite | affermazioni vietate |
+  | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+  | E5 | 0,938 | 0,500 | 1,000 | 0,906 | 1 | 1 |
+  | E5+E9 | 0,875 | 0,475 | 1,000 | 0,938 | **0** | **0** |
+
+- **Decisione:** tenere. Il recall perso su R2_Q004 viene recuperato da E4; le astensioni indebite e
+  la propaganda ripetuta come fatto spariscono.
+
+---
+
+## Esperimenti della Fase 2
+
+Protocollo invariato: una variabile alla volta, submission in `outputs/round2/`, confronto con
+`--baseline`, e **due** gate — le domande nuove (`eval/annotations_round_2.json`) e la regressione
+act 1+2 (`make regression`, soglie recall@5 ≥ 0,952 e MRR ≥ 0,886).
+
+Il gold del round 2 è scritto da noi (`annotation_source` lo dichiara) e copre le quattro famiglie
+difficili: solo-immagine (R2_Q001, R2_Q002), mappa (R2_Q003), conflitto di versione (R2_Q004),
+fonte dannosa e testimonianza contestata (R2_Q005, R2_Q006), propaganda (R2_Q007), registri (R2_Q008).
+
+### Baseline di Fase 2 (pipeline di Fase 1, corpus act 1-4)
+
+| recall@5 | precision@5 | hit@5 | MRR | qualification | astensioni indebite | affermazioni vietate |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0,938 | 0,500 | 1,000 | 0,906 | 0,500 | 1 | 1 |
+
+Il retrieval regge; **è la generazione a cedere**, e cede nel modo peggiore possibile. R2_Q005
+chiedeva se il console avesse consegnato una garanzia scritta e la pipeline rispondeva:
+
+> «**Sì**, si afferma che il console abbia consegnato ai capi locali una garanzia scritta […]
+> [fonte_dannosa_senza_qualifica_01]»
+
+citando la copia anonima come prova — mentre il dispaccio consolare che *nega* l'impegno era nei
+contesti al rank 2. Precision 1,00 e storia sbagliata: è il caso che dimostra che il retrieval,
+da solo, non basta.
+
+### E5 — Qualificare le fonti nel prompt
+
+- **Ipotesi:** il modello non può sapere che `articolo_propaganda_01` è un foglio celebrativo o che
+  una bozza è stata rettificata. Se la qualifica non arriva col contesto, la propaganda diventa fatto.
+- **Modifica:** `reliability` del manifest tradotta in un'etichetta leggibile (`RELIABILITY_LABELS`),
+  portata nel payload dei chunk e stampata accanto al `document_id` nel template; `GROUNDING`
+  chiede di qualificare la fonte prima di riportarla, di distinguere prova / indizio / congettura,
+  di presentare le versioni concorrenti entrambe con le loro date, e di non astenersi quando
+  l'evidenza è parziale. **Zero chiamate in più.**
+- **Risultato:** qualification_rate **0,500 → 0,750**, retrieval invariato (+0,000 su tutte e
+  quattro le metriche). R2_Q005 diventa `OK`: la stessa domanda ora risponde che l'affermazione
+  «proviene da voci non verificate e da un documento anonimo» e cita il dispaccio che la nega.
+- **Decisione:** tenere.
+- **Effetto collaterale, misurato:** sulla regressione act 1+2, R1_Q007 smette di dire «Non lo so»
+  e risponde «Le fonti disponibili non provano un accordo formale…» con quattro fonti. Lo scorer
+  la contava come astensione mancata — **errore dello strumento, non della pipeline**: la guida
+  chiede di «distinguere assenza di prova», non una formula esatta. Aggiunto
+  `INSUFFICIENCY_MARKERS`: una negazione ragionata vale come astensione **purché** la risposta non
+  affermi nessuno dei `forbidden_claims`.
+
+### E9 — Chunk minimi e deduplicazione
+
+Vedi Problema 9. Tenuto: astensioni indebite 1 → 0, affermazioni vietate 1 → 0, MRR +0,031.
+
+### E4 — Ibrido BM25 + RRF
+
+- **Ipotesi:** nomi, luoghi e date del 1860 sono terreno lessicale; con 31 documenti il denso da
+  solo ordina male.
+- **Modifica:** BM25 Okapi in ~30 righe di stdlib (`Bm25`), fuso col denso via Reciprocal Rank
+  Fusion. `rank_bm25` **non** è stato aggiunto: la formula sta in una classe e non giustifica una
+  dipendenza. Recupero largo (`FETCH_K=15` per lista), consegna stretta (5). Knob `HYBRID=0` per
+  tornare al solo denso.
+- **Risultato sul corpus di gara (act 1-4):**
+
+  | | recall@5 | precision@5 | hit@5 | MRR |
+  | --- | ---: | ---: | ---: | ---: |
+  | E5+E9 | 0,875 | 0,475 | 1,000 | 0,938 |
+  | E5+E9+E4 | **0,938** | 0,450 | 1,000 | **1,000** |
+
+  MRR 1,000: su ogni domanda la prima fonte rilevante è al rank 1. R2_Q004 recupera entrambe le
+  versioni e le racconta correttamente, con date e cancellatura a matita.
+- **⚠️ Il gate act 1+2 non passa:** recall 0,952 (ok) e hit 1,000 (ok), ma **MRR 0,821 contro la
+  soglia 0,886** e precision 0,457 contro 0,571. Sul corpus piccolo il denso era già quasi perfetto
+  e la fusione lo disturba; sul corpus grande la ribalta.
+- **Decisione: tenere, con l'eccezione dichiarata.** Il corpus di gara della Fase 2 e della Gold Run
+  è act 1-4, dove E4 è un guadagno netto; act 1+2 non viene più valutato da solo. La soglia **non**
+  è stata riscritta per farla passare: resta lì a ricordare il compromesso. Per revertire in un
+  secondo: `HYBRID=0`.
+- **`FETCH_K` è irrilevante:** 8, 15 e 25 danno lo stesso MRR su entrambi i corpora (act 1+2: 0,821;
+  act 1-4: 1,000). La perdita su act 1+2 è intrinseca alla fusione, non alla larghezza del recupero.
+
+### E2 — Taglio adattivo dei contesti
+
+- **Ipotesi:** consegnare meno di 5 contesti alza la precision e riduce il rumore.
+- **Modifica:** `TRIM_RATIO` scarta i contesti il cui punteggio RRF scende sotto quella frazione del
+  migliore. Con la fusione il punteggio esiste già: **non è servito** passare da
+  `client.query_points` come previsto (`QdrantVectorstore.search()` scarta ancora la similarità, ma
+  il rank basta a RRF).
+- **Risultato (`TRIM_RATIO=0,6`):** precision@5 0,450 → 0,463 (+0,013), recall / hit / MRR invariati.
+- **Decisione: knob lasciato a 0 (spento).** +0,013 su 8 domande nostre è rumore, non un risultato.
+  Il codice resta per rimisurarlo quando arriveranno le domande ufficiali.
+
+### E3 — Reranker, E7 — Didascalie per le immagini, E8 — Conflitti di versione: non eseguiti
+
+- **E8 è già soddisfatto da E4 + E5.** R2_Q004 recupera entrambe le versioni (recall 1,00) e la
+  risposta le presenta con le rispettive date senza cancellare la bozza. Non serviva codice
+  dedicato: serviva che entrambe arrivassero nei contesti e che il prompt sapesse cosa farne.
+- **E3 non ha più un bersaglio.** Era pensato per il ranking (R1_Q003 con la fonte decisiva al
+  rank 5); dopo E4 l'MRR sul corpus di gara è 1,000. Aggiungere `CohereReranker` significherebbe una
+  chiamata, una dipendenza e una chiave esterna che può cadere durante la Gold Run, per migliorare
+  una metrica già al massimo.
+- **E7 non è misurabile con il gold attuale.** L'unico documento muto è
+  `Sicily_location_map_960px` (0 caratteri) e nessuna domanda del gold dipende da esso: R2_Q003
+  ottiene già recall 1,00 dall'OCR di `mappa_porti_occidentali_annotata_01`. Il gate previsto
+  («deve far salire il recall sulla domanda-mappa senza toccare le altre») non è verificabile,
+  quindi l'esperimento resta aperto: va fatto se una domanda ufficiale chiede una relazione
+  geografica che l'OCR non può dare.
+
+### E6 — Sweep del chunking: **scartato**
+
+- **Griglia** `max_char ∈ {512, 768, 1024}` × `overlap ∈ {64, 128, 256}`, misurata sul **solo
+  retrieval** (nessuna chiamata LLM: si ricostruisce l'indice e si valutano i primi cinque contesti).
+
+  | max_char | overlap | chunk | recall@5 | precision@5 | hit@5 | MRR |
+  | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+  | 512 | 256 | 537 | 0,938 | **0,525** | 1,000 | 1,000 |
+  | 512 | 128 | 398 | 0,938 | 0,475 | 1,000 | 0,938 |
+  | 512 | 64 | 336 | 0,938 | 0,500 | 1,000 | 0,938 |
+  | 768 | 64 | 223 | 0,875 | 0,375 | 1,000 | 1,000 |
+  | 768 | 128 | 251 | 0,938 | 0,475 | 1,000 | 1,000 |
+  | 768 | 256 | 295 | 0,938 | 0,425 | 1,000 | 1,000 |
+  | 1024 | 64 | 165 | 0,938 | 0,450 | 1,000 | 1,000 |
+  | **1024** | **128** | **193** | 0,938 | 0,450 | 1,000 | 1,000 |
+  | 1024 | 256 | 211 | 0,938 | 0,475 | 1,000 | 1,000 |
+
+- **512/256 sembrava il vincitore** (+0,075 di precision). Verificato end-to-end, non lo è:
+  R2_Q006 perde il fatto «ventidue anni» perché i chunk più corti spezzano la testimonianza prima
+  che il dettaglio arrivi al generatore, e la regressione act 1+2 scende a MRR 0,714 (contro 0,821).
+- **Decisione: scartato**, si resta a 1024/128. **Lezione:** un miglioramento misurato sul solo
+  retrieval è un indizio, non una conclusione — la precision guadagnata era evidenza tolta al
+  generatore.
+
+---
+
+## Congelamento della Fase 2
+
+**Pipeline in gara:** E5 (qualifica delle fonti nel prompt) + E9 (chunk minimi e deduplicazione) +
+E4 (ibrido BM25 + RRF). `TRIM_RATIO=0`, `CHUNK_MAX_CHAR=1024`, `CHUNK_OVERLAP=128`,
+`CHUNK_MIN_CHAR=80`, `FETCH_K=15`, `HYBRID=1`. Indice: 31 documenti, **193 chunk**.
+
+| | baseline Fase 2 | finale | delta |
+| --- | ---: | ---: | ---: |
+| recall@5 | 0,938 | 0,938 | +0,000 |
+| precision@5 | 0,500 | 0,450 | −0,050 |
+| hit@5 | 1,000 | 1,000 | +0,000 |
+| MRR | 0,906 | **1,000** | **+0,094** |
+| qualification_rate | 0,500 | 0,600 – 0,800 | + |
+| astensioni indebite | 1 | **0** | −1 |
+| affermazioni vietate | 1 | **0** | −1 |
+| latenza media | 2 758 ms (7/7) | 2 691 ms (7/7) | = |
+| costo medio | € 0,000205 (8/8) | € 0,000326 (8/8) | = |
+
+Dry run completo, tutte con `--validate-only` **OK** e `--verify-contexts` a **0 contesti non
+tracciabili**:
+
+```bash
+python baseline_naive_rag.py --questions eval/questions_round_2.json --round-id round_2 \
+  --output outputs/round2/submission_round_2_final.json --rebuild
+python baseline_naive_rag.py --questions eval/questions_round_1.json --round-id round_1 \
+  --output outputs/round2/submission_round_1_su_corpus_completo.json
+python baseline_naive_rag.py --questions eval/sample_questions.json --round-id sample \
+  --output outputs/submission_sample.json
+make regression
+```
+
+### Limiti noti, da dichiarare invece che nascondere
+
+- **La regressione act 1+2 non passa la soglia MRR** (0,821 contro 0,886), per la scelta consapevole
+  di E4. Recall e hit sono intatti. `HYBRID=0` reverte in un secondo.
+- **`Sicily_location_map_960px` è muto** (0 caratteri): presente nell'indice, inutilizzabile.
+- **R2_Q008 resta a recall 0,50**: `agenda_incontri_01` non entra nei primi cinque insieme a
+  `registro_passaggio_01`. Come R1_Q008 nella Fase 1, è una domanda multi-hop con cinque slot.
+- **La formula «convergenza prudenziale non formalizzata» non viene citata** su R2_Q004: il chunk
+  che la contiene non entra nei primi cinque. La risposta è comunque corretta nella sostanza.
+- **I verdetti di generation oscillano fra run a configurazione identica** (R2_Q004, R2_Q006,
+  R2_Q008 cambiano fra due esecuzioni dello stesso codice). Le metriche di retrieval sono invece
+  deterministiche a indice fermo: sono quelle su cui si decide.
+- **Il gold del round 2 è nostro.** Otto domande scritte da noi non sono un campione: servono a
+  esercitare le famiglie difficili, non a stimare il punteggio.
+
+### Le tre evidenze per lo speech
+
+1. **Retrieval perfetto, storia sbagliata.** R2_Q005 con precision@5 = 1,00 rispondeva «Sì, il
+   console ha consegnato una garanzia scritta» citando una copia anonima, mentre il dispaccio che lo
+   nega era nei contesti al rank 2. Il fix non è stato recuperare meglio: è stato dire al generatore
+   *che cos'è* ogni fonte.
+2. **Quattro slot su cinque sprecati in intestazioni.** Il «Non lo so» su R2_Q004 non era prudenza:
+   erano due titoli duplicati e due date che avevano occupato i contesti al posto delle prove.
+3. **Un miglioramento misurato sul solo retrieval non è un miglioramento.** Lo sweep del chunking
+   dava +0,075 di precision e, provato end-to-end, toglieva un fatto richiesto alla risposta.

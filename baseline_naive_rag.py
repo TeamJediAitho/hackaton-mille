@@ -21,11 +21,15 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
+import re
 import shutil
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+import unicodedata
+from collections import Counter
 from pathlib import Path
 from typing import Any, Literal
 
@@ -185,12 +189,12 @@ def iter_ingest_files(
     manifest: dict,
     project_root: Path,
     acts: list[int] | None = None,
-) -> list[tuple[Path, str, str]]:
-    """File da ingerire, con la modality dichiarata nel manifest.
+) -> list[tuple[Path, dict]]:
+    """File da ingerire, con la voce di manifest che li descrive.
 
     `acts=None` (default) = tutto il manifest.
     """
-    rows: list[tuple[Path, str, str]] = []
+    rows: list[tuple[Path, dict]] = []
     for document in manifest["documents"]:
         if acts and document.get("act") not in acts:
             continue
@@ -198,7 +202,7 @@ def iter_ingest_files(
         if primary is None:
             print(f"skip (nessun file): {document['document_id']}")
             continue
-        rows.append((primary, document["document_id"], document.get("modality", "")))
+        rows.append((primary, document))
     return rows
 
 
@@ -219,12 +223,46 @@ DIGITAL_MODALITIES = {"text", "table"}
 FORCE_OCR_ALL = os.getenv("FORCE_OCR_ALL") == "1"
 CHUNK_MAX_CHAR = int(os.getenv("CHUNK_MAX_CHAR", "1024"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "128"))
+CHUNK_MIN_CHAR = int(os.getenv("CHUNK_MIN_CHAR", "80"))
+# E4: quanti candidati chiedere a ciascun retriever prima della fusione RRF.
+FETCH_K = int(os.getenv("FETCH_K", "15"))
+# HYBRID=0 torna al solo denso, per gli A/B senza toccare il codice.
+HYBRID = os.getenv("HYBRID", "1") == "1"
+# E2: 0 = consegna sempre k contesti; >0 = taglia sotto questa frazione del punteggio fuso migliore.
+TRIM_RATIO = float(os.getenv("TRIM_RATIO", "0"))
+# E10: quanti chunk al massimo puo' occupare uno stesso documento nei contesti finali.
+# 0 = nessun limite. Le domande cross-document hanno cinque slot per due o tre fonti: un
+# documento lungo e rumoroso (garib_d05, garib_d08) puo' prenderseli quasi tutti.
+MAX_PER_DOC = int(os.getenv("MAX_PER_DOC", "2"))
+# E11: LEXICAL_META=0 indicizza in BM25 il solo testo del chunk, per gli A/B.
+LEXICAL_META = os.getenv("LEXICAL_META", "1") == "1"
+# Sotto questa soglia di caratteri indicizzati un documento e' muto: e' entrato nell'indice ma non
+# puo' rispondere a niente (tipico delle immagini senza testo, es. una mappa senza annotazioni).
+MUTE_DOCUMENT_CHARS = 40
 # L'ingest e' dominato dal parsing Docling (l'OCR delle scansioni): i file vengono
 # processati in parallelo con un worker per thread. Ogni worker tiene le proprie
 # pipeline (il DocumentConverter di Docling non e' thread-safe). Le scritture su
 # Qdrant restano sul thread main per evitare upsert concorrenti sul client locale.
 # INGEST_WORKERS=1 ripristina l'esecuzione sequenziale, utile per gli A/B.
 INGEST_WORKERS = int(os.getenv("INGEST_WORKERS", "4"))
+
+# E5: `reliability` del manifest tradotta in una qualifica leggibile dal generatore. Il modello non
+# sa da solo che «articolo_propaganda_01» e' un foglio celebrativo o che una bozza e' stata
+# rettificata: senza questa etichetta ripete la propaganda come fatto.
+RELIABILITY_LABELS = {
+    "official_but_simplified": "fonte ufficiale ma semplificata",
+    "didactic": "testo didattico dell'archivio",
+    "reference": "scheda di riferimento",
+    "authentic_unreviewed": "documento originale non rivisto, OCR rumoroso",
+    "partial": "fonte parziale o incompleta",
+    "propaganda": "foglio di parte, propaganda",
+    "ambiguous": "fonte ambigua",
+    "allusive": "fonte allusiva, non esplicita",
+    "draft": "bozza superata da una versione successiva",
+    "revised": "versione riveduta che corregge una bozza precedente",
+    "unverified_hearsay": "copia anonima, voci non verificate",
+    "contested": "testimonianza tardiva e contestata",
+}
 
 
 def build_splitter():
@@ -249,7 +287,18 @@ def build_splitter():
                 for piece in text_splitter.split(chunk.text):
                     piece.metadata.update(chunk.metadata)
                     chunks.append(piece)
-            return chunks
+            # Titoli e date isolati diventano chunk a se': corti, spesso duplicati (Docling ripete
+            # l'intestazione di sezione) e ottimi da abbinare a una domanda breve. Occupavano fino a
+            # 4 slot su 5 dei contesti senza portare evidenza, e il generatore si asteneva.
+            seen: set[str] = set()
+            kept = []
+            for chunk in chunks:
+                key = " ".join(chunk.text.split())
+                if len(key) < CHUNK_MIN_CHAR or key in seen:
+                    continue
+                seen.add(key)
+                kept.append(chunk)
+            return kept
 
     return SizedSplitter(max_char=CHUNK_MAX_CHAR, overlap=CHUNK_OVERLAP)
 
@@ -309,7 +358,7 @@ def build_clients(api_key: str, model: str):
 
 def ingest_corpus(
     *,
-    files: list[tuple[Path, str]],
+    files: list[tuple[Path, dict]],
     embedder,
     qdrant_path: Path,
     collection: str,
@@ -338,6 +387,7 @@ def ingest_corpus(
         vector_config=[VectorConfig(dimensions=EMBEDDING_DIM, name=EMB_NAME)],
     )
 
+
     def build_ingest_pipeline(ocr: bool):
         return IngestionPipeline(
             modules=[
@@ -351,28 +401,47 @@ def ingest_corpus(
     local = threading.local()
     started = time.perf_counter()
 
-    def ingest_one(path: Path, document_id: str, modality: str):
-        needs_ocr = FORCE_OCR_ALL or modality not in DIGITAL_MODALITIES
+    def ingest_one(path: Path, document: dict):
+        needs_ocr = FORCE_OCR_ALL or document.get("modality", "") not in DIGITAL_MODALITIES
         pipelines = getattr(local, "pipelines", None)
         if pipelines is None:
             pipelines = local.pipelines = {}
         if needs_ocr not in pipelines:
             pipelines[needs_ocr] = build_ingest_pipeline(needs_ocr)
-        return document_id, needs_ocr, pipelines[needs_ocr].run(file_path=str(path))
+        return needs_ocr, pipelines[needs_ocr].run(file_path=str(path))
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        futures = [
-            pool.submit(ingest_one, path, document_id, modality)
-            for path, document_id, modality in files
-        ]
+        futures = [pool.submit(ingest_one, path, document) for path, document in files]
         results = [future.result() for future in futures]
 
+    # Conteggio per documento: un documento solo-immagine puo' entrare nell'indice senza testo
+    # utile e sparire in silenzio. La guida chiede di distinguere «il testo non e' stato
+    # recuperato» da «recuperato ma interpretato male»: questo separa il primo caso. Con l'ingest
+    # parallelo i chunk sono gia' in mano al chiamante: il conteggio non costa piu' una rilettura.
     all_chunks = []
-    for (path, document_id, _), (_, needs_ocr, chunks) in zip(files, results, strict=True):
+    mute: list[str] = []
+    for (path, document), (needs_ocr, chunks) in zip(files, results, strict=True):
+        document_id = document["document_id"]
         for chunk in chunks:
-            chunk.metadata.update({"document_id": document_id, "source_file": path.name})
+            chunk.metadata.update({
+                "document_id": document_id,
+                "source_file": path.name,
+                # E5: la qualifica della fonte viaggia col chunk e arriva al prompt.
+                "act": document.get("act"),
+                "title": document.get("title", ""),
+                "reliability": document.get("reliability", "unknown"),
+                "qualifica": RELIABILITY_LABELS.get(document.get("reliability", ""), "fonte non classificata"),
+            })
+        chars = sum(len((getattr(chunk, "text", None) or "").strip()) for chunk in chunks)
+        if chars < MUTE_DOCUMENT_CHARS:
+            mute.append(document_id)
         all_chunks.extend(chunks)
-        print(f"ingest: {document_id} <- {path.name} (ocr={'on' if needs_ocr else 'off'})")
+        print(
+            f"ingest: {document_id} <- {path.name} (ocr={'on' if needs_ocr else 'off'})"
+            f" -> {len(chunks)} chunk, {chars} caratteri"
+        )
+    if mute:
+        print(f"ATTENZIONE: {len(mute)} documenti sono entrati senza testo utile: {', '.join(mute)}")
     if all_chunks:
         vector_store.add(all_chunks, collection)
     elapsed = time.perf_counter() - started
@@ -383,28 +452,33 @@ def ingest_corpus(
 
 GROUNDING = (
     "Rispondi SOLO usando il contesto fornito. Ogni brano inizia con il suo document_id tra "
-    "parentesi quadre, es. [cronologia_ufficiale_01]. Cita SEMPRE la fonte con ESATTAMENTE "
-    "quel document_id. Se il contesto non contiene la risposta, di' esattamente: 'Non lo so'."
+    "parentesi quadre, es. [cronologia_ufficiale_01], seguito dalla qualifica della fonte. Cita "
+    "SEMPRE la fonte con ESATTAMENTE quel document_id.\n"
+    "Qualifica la fonte prima di riportarne il contenuto quando la qualifica lo richiede: "
+    "propaganda, voci non verificate, testimonianze tardive o contestate, bozze superate. Non "
+    "presentare mai come fatto cio' che una fonte di parte afferma: scrivi chi lo afferma.\n"
+    "Distingui prova diretta, indizio e congettura, e dichiara cosa le carte non provano.\n"
+    "Se due documenti sono versioni concorrenti dello stesso atto, riportale entrambe con le loro "
+    "date: la versione riveduta non cancella la bozza.\n"
+    "Se il contesto non contiene la risposta, di' esattamente: 'Non lo so'. Se contiene evidenza "
+    "anche solo parziale, rispondi con quella e dichiarane i limiti invece di astenerti."
 )
 
 
-def build_naive_dag(embedder, vector_store, llm):
+def build_naive_dag(llm):
     from datapizza.modules.prompt import ChatPromptTemplate
     from datapizza.pipeline import DagPipeline
 
     prompt_template = ChatPromptTemplate(
         user_prompt_template="Domanda: {{ user_prompt }}",
         retrieval_prompt_template=(
-            "{% for chunk in chunks %}[{{ chunk.metadata.document_id }}]\n{{ chunk.text }}\n\n{% endfor %}"
+            "{% for chunk in chunks %}[{{ chunk.metadata.document_id }}] ({{ chunk.metadata.qualifica }})"
+            "\n{{ chunk.text }}\n\n{% endfor %}"
         ),
     )
     dag = DagPipeline()
-    dag.add_module("embedder", embedder)
-    dag.add_module("retriever", vector_store.as_retriever())
     dag.add_module("prompt_template", prompt_template)
     dag.add_module("llm", llm)
-    dag.connect("embedder", "retriever", target_key="query_vector")
-    dag.connect("retriever", "prompt_template", target_key="chunks")
     dag.connect("prompt_template", "llm", target_key="memory")
     return dag
 
@@ -419,13 +493,109 @@ def dense_retrieve(embedder, vector_store, collection: str, domanda: str, k: int
     )
 
 
-def naive_rag(dag, collection: str, domanda: str, k: int = 5):
-    """RAG densa completa (retrieve + generate). La baseline Lab_08."""
+# E4: nomi, luoghi e date del 1860 sono terreno lessicale. `rank_bm25` sarebbe una dipendenza in
+# piu' per una formula di poche righe, quindi BM25 sta qui, in stdlib.
+def _tokens(text: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", unicodedata.normalize("NFKD", text.lower()))
+
+
+def _lexical_text(chunk: Any) -> str:
+    """Testo che il solo BM25 indicizza: contenuto + titolo + qualifica della fonte.
+
+    E11: una domanda come «confrontando i tre testi propagandistici» non ha nessuna parola in
+    comune con i fogli che cerca — «propaganda» sta nel manifest, non nel documento. Titolo e
+    qualifica entrano quindi nell'indice lessicale. **Il testo consegnato al generatore non
+    cambia**: i contesti restano il `chunk.text` originale, tracciabile nel corpus.
+    """
+    text = getattr(chunk, "text", "") or ""
+    if not LEXICAL_META:
+        return text
+    metadata = getattr(chunk, "metadata", None)
+    return " ".join([
+        text,
+        _meta_get(metadata, "title"),
+        _meta_get(metadata, "qualifica"),
+        _meta_get(metadata, "reliability"),
+    ])
+
+
+class Bm25:
+    """BM25 Okapi su tutti i chunk della collection. Nessuna API, nessuna dipendenza nuova."""
+
+    def __init__(self, chunks: list[Any], k1: float = 1.5, b: float = 0.75):
+        self.chunks = chunks
+        self.k1, self.b = k1, b
+        self.docs = [_tokens(_lexical_text(chunk)) for chunk in chunks]
+        self.lengths = [len(doc) for doc in self.docs]
+        self.avg_length = (sum(self.lengths) / len(self.docs)) if self.docs else 0.0
+        self.frequencies = [Counter(doc) for doc in self.docs]
+        appearances = Counter(term for doc in self.docs for term in set(doc))
+        n = len(self.docs)
+        self.idf = {
+            term: math.log(1 + (n - count + 0.5) / (count + 0.5)) for term, count in appearances.items()
+        }
+
+    def search(self, domanda: str, k: int) -> list[Any]:
+        query = _tokens(domanda)
+        scored = []
+        for index, frequencies in enumerate(self.frequencies):
+            score = 0.0
+            for term in query:
+                tf = frequencies.get(term, 0)
+                if not tf:
+                    continue
+                norm = 1 - self.b + self.b * self.lengths[index] / (self.avg_length or 1)
+                score += self.idf[term] * tf * (self.k1 + 1) / (tf + self.k1 * norm)
+            if score > 0:
+                scored.append((score, index))
+        scored.sort(key=lambda row: -row[0])
+        return [self.chunks[index] for _, index in scored[:k]]
+
+
+def reciprocal_rank_fusion(rankings: list[list[Any]], k: int, constant: int = 60) -> list[Any]:
+    """RRF: un documento sale se compare in alto in *entrambe* le liste.
+
+    E2: con TRIM_RATIO > 0 si consegnano meno di k contesti, tagliando quelli il cui punteggio
+    fuso scende sotto quella frazione del primo. Cinque contesti sono un massimo, non una quota.
+    """
+    scores: dict[tuple[str, str], float] = {}
+    chunks: dict[tuple[str, str], Any] = {}
+    for ranking in rankings:
+        for rank, chunk in enumerate(ranking, start=1):
+            key = (_meta_get(getattr(chunk, "metadata", None), "document_id"), getattr(chunk, "text", ""))
+            scores[key] = scores.get(key, 0.0) + 1 / (constant + rank)
+            chunks.setdefault(key, chunk)
+    ordered = sorted(scores, key=lambda key: -scores[key])
+    if MAX_PER_DOC:
+        seen: dict[str, int] = {}
+        capped = []
+        for key in ordered:
+            document_id = key[0]
+            if seen.get(document_id, 0) >= MAX_PER_DOC:
+                continue
+            seen[document_id] = seen.get(document_id, 0) + 1
+            capped.append(key)
+        ordered = capped
+    ordered = ordered[:k]
+    if TRIM_RATIO and ordered:
+        floor = scores[ordered[0]] * TRIM_RATIO
+        ordered = [key for key in ordered if scores[key] >= floor]
+    return [chunks[key] for key in ordered]
+
+
+def retrieve(embedder, vector_store, collection: str, domanda: str, k: int, bm25: Bm25 | None):
+    """Recupera largo e consegna stretto: denso + BM25 fusi con RRF, poi i primi k."""
+    if bm25 is None:
+        return dense_retrieve(embedder, vector_store, collection, domanda, k=k)
+    dense = dense_retrieve(embedder, vector_store, collection, domanda, k=FETCH_K)
+    return reciprocal_rank_fusion([dense, bm25.search(domanda, FETCH_K)], k)
+
+
+def naive_rag(dag, domanda: str, chunks: list[Any]):
+    """Generazione sui contesti gia' selezionati."""
     return dag.run(
         {
-            "embedder": {"text": domanda},
-            "retriever": {"collection_name": collection, "k": k, "vector_name": EMB_NAME},
-            "prompt_template": {"user_prompt": domanda},
+            "prompt_template": {"user_prompt": domanda, "chunks": chunks},
             "llm": {"input": domanda, "system_prompt": GROUNDING},
         }
     )
@@ -454,12 +624,13 @@ def answer_one(
     collection: str,
     model: str,
     k: int,
+    bm25: Bm25 | None = None,
 ) -> dict:
     question_text = question["question"]
     started = time.perf_counter()
-    result = naive_rag(dag, collection, question_text, k=k)
+    hits = retrieve(embedder, vector_store, collection, question_text, k=k, bm25=bm25)
+    result = naive_rag(dag, question_text, hits)
     latency_ms = max(0, round((time.perf_counter() - started) * 1000))
-    hits = result.get("retriever") or dense_retrieve(embedder, vector_store, collection, question_text, k=k)
     llm_out = result["llm"]
     answer_text = getattr(llm_out, "text", None) or str(llm_out)
     input_tokens, output_tokens, cached = _token_usage(llm_out)
@@ -568,7 +739,8 @@ def main() -> int:
         collection=args.collection,
         rebuild=args.rebuild,
     )
-    dag = build_naive_dag(embedder, vector_store, llm)
+    dag = build_naive_dag(llm)
+    bm25 = Bm25(list(vector_store.dump_collection(args.collection))) if HYBRID else None
 
     answers = [
         answer_one(
@@ -579,6 +751,7 @@ def main() -> int:
             collection=args.collection,
             model=model,
             k=args.k,
+            bm25=bm25,
         )
         for row in questions["questions"]
     ]
