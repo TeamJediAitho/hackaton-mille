@@ -139,6 +139,12 @@ def declared_cost_eur(
 
 
 def _token_usage(response: Any) -> tuple[int, int, int]:
+    # datapizza ClientResponse espone i token direttamente sull'oggetto
+    pt = int(getattr(response, "prompt_tokens_used", 0) or 0)
+    ct = int(getattr(response, "completion_tokens_used", 0) or 0)
+    cached = int(getattr(response, "cached_tokens_used", 0) or 0)
+    if pt or ct:
+        return pt, ct, cached
     usage = getattr(response, "usage", None)
     if usage is None:
         return 0, 0, 0
@@ -197,6 +203,11 @@ def iter_ingest_files(manifest: dict, project_root: Path) -> list[tuple[Path, st
 EMB_NAME = "content_embedding"
 EMBEDDING_MODEL = "text-embedding-3-small"
 EMBEDDING_DIM = 1536
+
+# Retrieval: recupera largo, poi accorpa i chunk per document_id fino a MAX_CONTEXTS.
+# Piu' documenti distinti nei 5 slot = piu' recall/precision; il generatore riceve
+# comunque tutto il testo dei chunk recuperati (concatenati per documento).
+RETRIEVE_K = 12
 
 
 def _local_qdrant(path: Path):
@@ -278,34 +289,19 @@ def ingest_corpus(
 
 
 GROUNDING = (
-    "Rispondi SOLO usando il contesto fornito. Ogni brano inizia con il suo document_id tra "
-    "parentesi quadre, es. [cronologia_ufficiale_01]. Cita SEMPRE la fonte con ESATTAMENTE "
-    "quel document_id. Se il contesto non contiene la risposta, di' esattamente: 'Non lo so'."
+    "Rispondi SOLO usando i brani di contesto forniti. Ogni brano inizia con il suo document_id "
+    "tra parentesi quadre, es. [cronologia_ufficiale_01]. Cita SEMPRE la fonte con ESATTAMENTE "
+    "quel document_id. Non aggiungere fatti, date, luoghi o nomi che non compaiono nei brani.\n"
+    "Quando i brani bastano, rispondi in modo diretto e completo alla domanda.\n"
+    "Quando i brani NON bastano per una conclusione certa, non inventare e non limitarti a "
+    "'Non lo so': dichiara che le fonti disponibili non permettono di stabilirlo e spiega in "
+    "breve perche' — quali indizi sono presenti, che cosa manca (es. un atto firmato, una data), "
+    "e se le fonti si contraddicono o sono di parte (propaganda, testimonianza tardiva). "
+    "Distingui sempre un indizio da una prova."
 )
 
 
-def build_naive_dag(embedder, vector_store, llm):
-    from datapizza.modules.prompt import ChatPromptTemplate
-    from datapizza.pipeline import DagPipeline
-
-    prompt_template = ChatPromptTemplate(
-        user_prompt_template="Domanda: {{ user_prompt }}",
-        retrieval_prompt_template=(
-            "{% for chunk in chunks %}[{{ chunk.metadata.document_id }}]\n{{ chunk.text }}\n\n{% endfor %}"
-        ),
-    )
-    dag = DagPipeline()
-    dag.add_module("embedder", embedder)
-    dag.add_module("retriever", vector_store.as_retriever())
-    dag.add_module("prompt_template", prompt_template)
-    dag.add_module("llm", llm)
-    dag.connect("embedder", "retriever", target_key="query_vector")
-    dag.connect("retriever", "prompt_template", target_key="chunks")
-    dag.connect("prompt_template", "llm", target_key="memory")
-    return dag
-
-
-def dense_retrieve(embedder, vector_store, collection: str, domanda: str, k: int = 5):
+def dense_retrieve(embedder, vector_store, collection: str, domanda: str, k: int = RETRIEVE_K):
     query_vector = embedder.embed(domanda)
     return vector_store.search(
         collection_name=collection,
@@ -315,36 +311,37 @@ def dense_retrieve(embedder, vector_store, collection: str, domanda: str, k: int
     )
 
 
-def naive_rag(dag, collection: str, domanda: str, k: int = 5):
-    """RAG densa completa (retrieve + generate). La baseline Lab_08."""
-    return dag.run(
-        {
-            "embedder": {"text": domanda},
-            "retriever": {"collection_name": collection, "k": k, "vector_name": EMB_NAME},
-            "prompt_template": {"user_prompt": domanda},
-            "llm": {"input": domanda, "system_prompt": GROUNDING},
-        }
-    )
-
-
-def hits_to_contexts(hits: list[Any], max_contexts: int = 5) -> list[dict]:
-    contexts: list[dict] = []
-    for index, hit in enumerate(hits[:max_contexts], start=1):
+def merge_contexts(hits: list[Any], max_docs: int = 5) -> list[dict]:
+    """Un documento per contesto: accorpa i chunk dello stesso document_id
+    (nell'ordine di retrieval) e tiene i primi `max_docs` documenti.
+    Cosi' i 5 slot contengono 5 documenti distinti invece di 2-3 ripetuti."""
+    order: list[str] = []
+    by_doc: dict[str, list[str]] = {}
+    for hit in hits:
         document_id = _meta_get(getattr(hit, "metadata", None), "document_id")
         content = (getattr(hit, "text", None) or "").strip()
         if not document_id or not content:
             continue
-        contexts.append({"rank": index, "document_id": document_id, "content": content})
-    # Re-numera 1..N dopo eventuali skip
-    for index, row in enumerate(contexts, start=1):
-        row["rank"] = index
+        if document_id not in by_doc:
+            by_doc[document_id] = []
+            order.append(document_id)
+        by_doc[document_id].append(content)
+    contexts: list[dict] = []
+    for rank, document_id in enumerate(order[:max_docs], start=1):
+        contexts.append(
+            {"rank": rank, "document_id": document_id, "content": "\n\n".join(by_doc[document_id])}
+        )
     return contexts
+
+
+def _format_contexts(contexts: list[dict]) -> str:
+    return "\n\n".join(f"[{row['document_id']}]\n{row['content']}" for row in contexts)
 
 
 def answer_one(
     question: dict,
     *,
-    dag,
+    llm,
     embedder,
     vector_store,
     collection: str,
@@ -353,17 +350,18 @@ def answer_one(
 ) -> dict:
     question_text = question["question"]
     started = time.perf_counter()
-    result = naive_rag(dag, collection, question_text, k=k)
+    hits = dense_retrieve(embedder, vector_store, collection, question_text, k=RETRIEVE_K)
+    contexts = merge_contexts(hits, max_docs=k)
+    prompt = f"Domanda: {question_text}\n\nBrani di contesto:\n\n{_format_contexts(contexts)}"
+    llm_out = llm.invoke(input=prompt, system_prompt=GROUNDING)
     latency_ms = max(0, round((time.perf_counter() - started) * 1000))
-    hits = result.get("retriever") or dense_retrieve(embedder, vector_store, collection, question_text, k=k)
-    llm_out = result["llm"]
     answer_text = getattr(llm_out, "text", None) or str(llm_out)
     input_tokens, output_tokens, cached = _token_usage(llm_out)
     return {
         "question_id": question["question_id"],
         "question": question_text,
         "answer": answer_text,
-        "contexts": hits_to_contexts(hits, max_contexts=k),
+        "contexts": contexts,
         "telemetry": {
             "latency_ms": latency_ms,
             "declared_cost_eur": declared_cost_eur(input_tokens, output_tokens, cached),
@@ -455,12 +453,10 @@ def main() -> int:
         collection=args.collection,
         rebuild=args.rebuild,
     )
-    dag = build_naive_dag(embedder, vector_store, llm)
-
     answers = [
         answer_one(
             row,
-            dag=dag,
+            llm=llm,
             embedder=embedder,
             vector_store=vector_store,
             collection=args.collection,

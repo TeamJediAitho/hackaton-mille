@@ -1,0 +1,366 @@
+{
+  "schema_version": "1.0",
+  "round_id": "round_1",
+  "answers": [
+    {
+      "question_id": "R1_Q001",
+      "question": "Secondo la cronologia ufficiale, in quale data e in quale luogo avviene lo sbarco?",
+      "answer": "Lo sbarco avviene il 11 maggio 1860 a Marsala [cronologia_ufficiale_01].",
+      "contexts": [
+        {
+          "rank": 1,
+          "document_id": "cronologia_ufficiale_01",
+          "content": "## 11 maggio\n\n Nella giornata dell' 11 maggio 1860 volontari presero terra a Marsala. 1 rapporti pervenuti dagli uffici della provincia descrivono lo sbarco come fatto sopraggiunto prima che le autorità locali avessero ricevuto un avviso formale capace di determinarne con sicurezza il luogo e l'ora. Le notizie si diffusero con grande rapidità lungo la costa e, nella sera, verso 1'interno. primi\n\n ## 15 maggio\n\n Presso Calatafimi ebbe luogo il primo urto di maggiore rilievo fra le forze avanzanti e le truppe 1 rapporti ne danno versioni non sempre concordi quanto al numero degli uomini impegnati, ma convengono nel considerarlo il primo scontro che mutò il carattere   delle operazioni, sino allora giudicate da taluni come episodio circoscritto alla costa. regie.\n\n ## Dal 27 al 30 maggio"
+        },
+        {
+          "rank": 2,
+          "document_id": "cronologia_ufficiale_01",
+          "content": "## SEGRETERIA DI GOVERNO ESTRATTO CRONOLOGICO\n\n Per uso degli uffici; € affinché le comunicazioni pervenute in questi giorni sieno ricondotte ad un ordine uniforme; si raccolgono qui appresso le principali notizie che risultano dai rapporti militari e dalle corrispondenze amministrative. Si registrano i fatti secondo la successione dei giorni, senza dar luogo alle voci di piazza; alle supposizioni private 0 alle notizie non ancora confermate.\n\n ## 6 maggio\n\n Da notizie telegrafiche e marittime si apprende che due vapori, recanti volontari armati, avrebbero lasciato la costa presso Quarto. Non risultano in questo ufficio; alla data predetta; indicazioni certe circa il luogo verso il quale essi intendessero dirigersi; le diverse congetture che corsero nelle ore successive non furono accompagnate da dispacci ufficiali.\n\n ## 11 maggio"
+        },
+        {
+          "rank": 3,
+          "document_id": "nota_funzionario_borbonico_01",
+          "content": "Tre cancelli di   servizio   rimasero per il   passaggio delle merci. capisquadra civili sostengono che si trattasse di attività portuale ordinaria e ricordano che, nei giorni di traffico intenso; tali accessi vengono talvolta usati per evitare ingombro alla porta principale. La spiegazione non è, in sé, inverosimile; resta però singolare che F'apertura sia coincisa con una notte di tante voci e con la riduzione delle pattuglie sulle banchine. aperti\n\n Ho inoltre verificato la presenza di carri riuniti in numero superiore a quello che impiegati del dazio ricordano per le giornate precedenti. Alcuni erano vuoti, altri dichiarati destinati a farina e granaglie. Più persone affermano che essi fossero stati predisposti prima che l'arrivo dei volontari fosse conosciuto pubblicamente in città. Non mi è stato possibile stabilire chi ne avesse dato ordine, né se la preparazione avesse fine politico 0 soltanto commerciale. già gli"
+        },
+        {
+          "rank": 4,
+          "document_id": "giornale_liberale_01",
+          "content": "se tali disposizioni siano nate da accordo espresso da quella concordia dei sentimenti   che   rende   superflui protocolli.   Quando un paese intero pensa la stessa cosa, una firma aggiunge poco. I nomi dei benefattori verranno tempo debito; per ora basti   sapere che Toccidente non fu colto impreparato.\n\n Salutiamo pertanto quanti, senza rumore, hanno tenuto aperte le vie;   preparato mezzi impedito che F'inerzia d'alcuni diventasse ostacolo alla volontà di tutti\n\n ## CORRISPONDENZE BREVI\n\n Da Trapani si segnala grande affluenza di persone desiderose di notizie dalla costa. I caffè e le case di commercio discutono arrivo gli   orari dei   bastimenti   vengono copiati ricopiati con una sollecitudine che, in tempi ordinari, nessuno avrebbe per simili particolari. ogni"
+        },
+        {
+          "rank": 5,
+          "document_id": "garib_d09",
+          "content": "121\n\n ## 505. Parole dette al popolo a Marsala il 19 luglio 1862\n\n Son passati due anni, che toccai questa terra coi Mille prodi, che mi accompagnavano. Voi ci accoglieste   festosi, € veramente festosi, ed erano momenti di pericolo ( di vero pericolo. Allora eravamo pochi, i nostri nemici eran molti ; perciò erano momenti di gran pericolo, mna voi ci accoglieste festosamente, ed io lo ricordo. Quest'accoglienza ci fu di augurio, e nessun paese ne togliere la gloria a Marsala. Noi eravam pochi, il nemico contava un'armata di 128.000 uomini, aveva una squadra imponente, ed era riconosciuto da tutta Europa; Ma noi ci ritemprammo, forti nelle nostre aspirazioni, sfidammo i tiranni e li sperdemmo, e furono liberi un - dici milioni   di fratelli Allora   sfidammo, ora sfidiamo. potrà qui"
+        }
+      ],
+      "telemetry": {
+        "latency_ms": 2653,
+        "declared_cost_eur": 0.00023,
+        "model_calls": [
+          {
+            "provider": "openai",
+            "model": "gpt-4o-mini",
+            "input_tokens": 1421,
+            "output_tokens": 28,
+            "cached_input_tokens": 0
+          }
+        ]
+      }
+    },
+    {
+      "question_id": "R1_Q002",
+      "question": "Quali quattro categorie usa il dossier per classificare il peso delle evidenze?",
+      "answer": "Le quattro categorie usate dal dossier per classificare il peso delle evidenze sono:\n\n1. **Prova diretta**: Atto contemporaneo, riconoscibile nella sua provenienza e pertinente al fatto.\n2. **Indizio**: Spiegazione ragionevole che acquista forza quando concorda con altre carte indipendenti.\n3. **Congettura**: Passaggio che l'esaminatore è costretto ad aggiungere perché non contenuto nel documento.\n4. **Fonte contestata**: Carta la cui attendibilità è diminuita da fattori come tardività, interessi o contraddizioni.\n\nQueste categorie servono a valutare il supporto che ciascuna carta offre alla ricostruzione dei fatti. [dossier_introduttivo_01]",
+      "contexts": [
+        {
+          "rank": 1,
+          "document_id": "dossier_introduttivo_01",
+          "content": "## Indizio\n\n una spiegazione ragionevole e acquisti forza quando concordi con altre carte indipendenti.  Carri preparati prima del bisogno manifesto, corrieri inviati in una medesima direzione, riunioni insolite 0 formule evasive possono essere indizi; non divengono per ciò solo confessioni.\n\n ## Congettura\n\n Si chiamerà congettura passaggio che l'esaminatore sia costretto ad aggiungere perché la carta non lo contiene. La congettura servire a formulare una domanda, non a chiuderla. Deve essere separata con cura dalle parole del documento e non presentata come cosa provata. ogni può\n\n ## Fonte contestata\n\n Si chiamerà fonte contestata la carta la cui utilità non è nulla, ma la cui attendibilità è diminuita da tardività; interesse, contraddizioni, mancanza di riscontri 0 opposizione di documenti più prossimi ai fatti. Essa mostrare come una versione nacque e circolò; non deve essere elevata a certezza senza esame. può"
+        },
+        {
+          "rank": 2,
+          "document_id": "dossier_introduttivo_01",
+          "content": "## ISTRUZIONE RISERVATA PER L'ESAME COMPARATO DELLE CARTE\n\n Nel riordinare corrispondenze; note, registri, giornali e memorie concernenti recenti avvenimenti, conviene che 1'esaminatore non attribuisca alla carta maggior forza di quella che essa naturalmente possiede. da più bocche essere   insistente senza essere vera; una frase prudente contenere un avvertimento senza costituire un patto; una memoria tardiva conservare un fatto e, insieme, averlo alterato. può può può\n\n Si adopreranno pertanto; nelle minute di lavoro, quattro qualificazioni, affinché sia sempre chiaro il di appoggio che ciascuna carta presta alla ricostruzione. grado\n\n ## Prova diretta\n\n Si chiamerà prova diretta 1'atto contemporaneo; riconoscibile nella sua provenienza e pertinente al fatto; che lo affermi in termini espliciti 0 ne registri l'esecuzione senza bisogno di  supplire con supposizioni.  Una firma, un ordine, una ricevuta 0 un dispaccio preciso hanno maggior peso di un racconto che dica soltanto <si sa) 0 <si dice).\n\n ## Indizio"
+        },
+        {
+          "rank": 3,
+          "document_id": "dossier_introduttivo_01",
+          "content": "Quando le carte non bastino; la conclusione più corretta sarà dichiarare che non bastano. L'assenza di una prova non dimostra che il fatto non sia mai avvenuto; dimostra; modestamente utilmente, che nel fascicolo presente esso non è provato. più più"
+        },
+        {
+          "rank": 4,
+          "document_id": "elenco_personaggi_01",
+          "content": "Compilato per agevolare il rinvio fra corrispondenze; registri e note d'ufficio."
+        },
+        {
+          "rank": 5,
+          "document_id": "giornale_borbonico_01",
+          "content": "Queste storie; ripetute con l'aria misteriosa che tanto piace agli oziosi, non sono accompagnate da verbali, lettere sottoscritte testimonianze riconoscibili. E facile; dopo Favvenimento, attribuire   intenzione   politica qualunque carro fermo in una corte qualunque granaro aperto per il commercio\n\n Il Governo non deve lasciarsi guidare dalle fantasie dei salotti Ogni accusa richiede un fatto; e ogni fatto nome. Finché nomi carte mancano, le voci restano voci. un La tranquillità   pubblica   esige   invece che si   proceda con documenti nomi requisizioni movimenti sospetti si rivolgano agli uffici competenti senza alimentare racconti anonimi che turbano mercati le famiglie.\n\n Foglio 1"
+        }
+      ],
+      "telemetry": {
+        "latency_ms": 2264,
+        "declared_cost_eur": 0.000261,
+        "model_calls": [
+          {
+            "provider": "openai",
+            "model": "gpt-4o-mini",
+            "input_tokens": 1083,
+            "output_tokens": 164,
+            "cached_input_tokens": 0
+          }
+        ]
+      }
+    },
+    {
+      "question_id": "R1_Q003",
+      "question": "Quali preparativi concreti chiede il principe Salina e con quali cautele?",
+      "answer": "Il principe Salina richiede di preparare due granai sgombri per ricevere provviste o per dare l'idea che debbano riceverne, utilizzando come pretesto la raccolta anticipata e la necessità di muovere sacchi prima che il caldo li guasti. Inoltre, sottolinea l'importanza di non promettere nulla a nessuno e di mantenere tutto in modo che possa sembrare ordinaria amministrazione. Richiede di essere pronti senza legarsi a nessuna promessa formale, affermando che la prudenza consiste nel non anticipare gli avvenimenti e nel non mostrare le proprie intenzioni.\n\nCita: [lettera_salina_01].",
+      "contexts": [
+        {
+          "rank": 1,
+          "document_id": "elenco_personaggi_01",
+          "content": "| Nome e qualità | Sede o condizione | Carte nelle quali ricorre | Osservazioni |\n| --- | --- | --- | --- |\n| Principe Fabrizio Salina | Notabile palermitano; interessi nell'occidente | Lettera privata; agenda di casa | Usa formule prudenti; dispone carri e granai senza promessa scritta. |\n| Tancredi Falconeri | Giovane di famiglia; frequenta case di Palermo e Trapani | Biglietto a Sant'Elia; agenda | Tratta mezzi e passaggi con linguaggio allusivo; preferisce Mazara al molo. |\n| Edward Hamilton | Console britannico | Dispaccio consolare; registro di corrieri | Distingue traffico mercantile da qualunque garanzia politica. |\n| Ruggiero Malaspina | Funzionario del servizio borbonico | Nota sul porto e sulle pattuglie | Registra anomalie ma dichiara di non poter accusare i notabili di collusione. |\n| Giuseppe Lo Bianco | Commerciante e notaio | Agenda; registri di carri; lettere private | Associato a magazzini, granaglie e disponibilità di dodici carri. |\n| Baronessa Sant'Elia | Proprietaria; casa frequentata da intermediari | Agenda; biglietti; registro dei passaggi | Riceve e trasmette messaggi informali; la sua casa compare nel movimento Trapani-Mazara. |\n| Capitano Lanza | Ufficiale; testimone in memoria successiva | Verbale del 1882 | Rende dichiarazioni molto nette molti anni dopo i fatti, senza carte a sostegno. |"
+        },
+        {
+          "rank": 2,
+          "document_id": "lettera_tancredi_01",
+          "content": "Trapani, 10 maggio 1860 Baronessa carissima; se gli ospiti di cui tutti parlano senza nominarli arriveranno davvero da occidente; sarà assai più utile che trovino carrozze; muli e strade aperte che non dichiarazioni patriottiche pronunciate troppo presto. Le dichiarazioni costano poco quando il vincitore è entrato in città; prima; costano quanto un patrimonio e talvolta anche di più. Lo zio desidera che ogni porta sembri essersi aperta da sola. E una forma di buon politico: nessuno deve dire di essere stato invitato; e nessuno deve sostenere di essere stato respinto. Il signor Lo Bianco attende un segnale; ma sarebbe un errore darglielo nella forma d'una firma. Fategli sapere, per persona discreta, che ciò che deve essere pronto sia pronto; il resto lo capirà da sé. Quanto ai carri, Mazara mi pare più discreta del molo. Sul molo ruota diviene una notizia;   ogni facchino un corrispondente cassa un argomento. A carri possono ancora essere dodici carri, mentre rischierebbero di diventare, prima ancora di muoversi, una scelta di governo. Se vedrete Russo; ditegli soltanto che la vendemmia; 'anno; ha fretta. Capirà la facezia. Non aggiungete altro e, soprattutto; non lasciate che la nostra fretta assomigli ad una certezza: non si tratta di scegliere in anticipo chi vincerà; ma di non essere gli ultimi a capire che qualche cosa sta cambiando. Mi direte che questa è politica fatta con le rimesse e le carrozze. E possibile; ma talvolta le carrozze arrivano dove i proclami non osano ancora passare. Vostro dev.mo T. già gusto poter poter ogni ogni qui quest"
+        },
+        {
+          "rank": 3,
+          "document_id": "lettera_salina_01",
+          "content": "le case dell 'occidente hanno udito; per vie che nessuno reputa conveniente nominare; che due vapori potrebbero mostrarsi prima della metà del mese. La voce è giunta con quella singolare puntualità che hanno le notizie quando tutti fingono di non attenderle. Non so chi labbia portata e, soprattutto; non desidero saperlo per iscritto: vi sono tempi nei una lettera troppo chiara diviene indiscreta dun testimone. Ti prego dunque di fare una cosa semplice, che domani possa essere spiegata come ordinaria amministrazione dei nostri fondi. Fa con uomini avvezzi alla strada; e fa' che due granai restino sgombri quanto basta a ricevere provviste 0 a lasciar credere che debbano riceverne. Il pretesto sarà la raccolta anticipata e la necessità di muovere sacchi prima che il caldo li guasti. Nessuno avrà motivo di meravigliarsi; e se qualcuno si meravigliasse; troverà una spiegazione già pronta. Non si prometta nulla a nessuno; né a voce solenne né, tanto meno, con una riga firmata. Essere preparati non significa essersi legati.  Se gli avvenimenti prenderanno una via diversa; carri avranno trasportato grano e 1 granai avranno servito al grano; se invece la costa darà le notizie che taluni aspettano; non saremo costretti a cercare in fretta ciò che avremmo potuto predisporre con calma. Quanto al console; non mi è stata riferita alcuna assicurazione. Egli avrebbe soltanto osservato; con quella freddezza che gli inglesi scambiano per innocenza, che un porto affollato di mercanti vede meno nettamente  le uniformi e distingue con maggiore   difficoltà ciò che commerciale da ciò che non lo è Da una simile frase molti ricaveranno una promessa; io non ve ne alcuna. Fa' pure che chi deve sapere sappia il necessario, ma non di più. Lo Bianco potrà intendere che talune porte debbono restare praticabili senza che gli si dica per chi; e se Sant 'Elia facesse domande; rispondile che la prudenza non ha colore finché non è costretta a mostrarlo. La prudenza, in tempi come questi, consiste nel non arrivare mai gli avvenimenti nel dire, quando siano passati, che ci si trovava là per caso. Tuo affmo F qui quali più leggo dopo poter"
+        },
+        {
+          "rank": 4,
+          "document_id": "dispaccio_console_inglese_01",
+          "content": "## COPIA IN TRADUZIONE DISPACCIO CONSOLARE\n\n Trapani, 10 maggio 1860.\n\n Al Segretario di Stato di S. M. Britannica per gli Affari Esteri.\n\n Milord,\n\n durante le ultime quarantotto ore, il traffico mercantile nel porto di Marsala e lungo gli scali vicini ha mostrato un movimento superiore   all'ordinario. Non vi è, per quanto consta a questo   ufficio, interruzione delle consuete   operazioni commerciali; tuttavia la frequenza delle domande circa l'arrivo la partenza dei bastimenti induce a ritenere che le notizie provenienti dal continente siano seguite con particolare attenzione. che,"
+        },
+        {
+          "rank": 5,
+          "document_id": "giornale_borbonico_01",
+          "content": "Queste storie; ripetute con l'aria misteriosa che tanto piace agli oziosi, non sono accompagnate da verbali, lettere sottoscritte testimonianze riconoscibili. E facile; dopo Favvenimento, attribuire   intenzione   politica qualunque carro fermo in una corte qualunque granaro aperto per il commercio\n\n Il Governo non deve lasciarsi guidare dalle fantasie dei salotti Ogni accusa richiede un fatto; e ogni fatto nome. Finché nomi carte mancano, le voci restano voci. un La tranquillità   pubblica   esige   invece che si   proceda con documenti nomi requisizioni movimenti sospetti si rivolgano agli uffici competenti senza alimentare racconti anonimi che turbano mercati le famiglie.\n\n Foglio 1"
+        }
+      ],
+      "telemetry": {
+        "latency_ms": 1916,
+        "declared_cost_eur": 0.000384,
+        "model_calls": [
+          {
+            "provider": "openai",
+            "model": "gpt-4o-mini",
+            "input_tokens": 1965,
+            "output_tokens": 149,
+            "cached_input_tokens": 0
+          }
+        ]
+      }
+    },
+    {
+      "question_id": "R1_Q004",
+      "question": "Che cosa afferma e che cosa nega il dispaccio del console britannico riguardo alla presenza inglese?",
+      "answer": "Il dispaccio del console britannico afferma che navi battenti bandiera britannica si trovano in rada per affari di commercio e che la loro presenza è stata notata dagli abitanti. Tuttavia, il console chiarisce che non sono stati assunti impegni politici e che non è stata impartita alcuna protezione a favore di forze irregolari. Inoltre, specifica che la presenza di bandiere mercantili britanniche non deve essere interpretata come una promessa di sicurezza. In sintesi, conferma la presenza commerciale britannica ma nega qualsiasi impegno politico o militare [dispaccio_console_inglese_01].",
+      "contexts": [
+        {
+          "rank": 1,
+          "document_id": "dispaccio_console_inglese_01",
+          "content": "Mi permetto pertanto di raccomandare che ogni rapporto proveniente da questa costa distingua con esattezza fra presenza britannica; impressione prodotta da tale presenza e impegni effettivamente assunti. Le prime due circostanze sono osservabili; la terza, allo stato degli atti di questo ufficio; non sussiste .\n\n Ho l'onore di essere, Milord,\n\n il Vostro obbedientissimo servitore,\n\n E.H"
+        },
+        {
+          "rank": 2,
+          "document_id": "dispaccio_console_inglese_01",
+          "content": "Navi battenti bandiera britannica si trovano in rada per affari di commercio e secondo consuetudine. La loro presenza è stata notata dagli abitanti e da persone appartenenti a famiglie di qualche influenza. Più d'un visitatore ha domandato, con apparente interesse mercantile; fossero gli orari presumibili di partenza e se i capitani intendessero trattenersi qualora la costa divenisse meno sicura. Non ho dato, né mi risulta che alcun ufficiale britannico abbia dato; risposta che possa essere intesa come impegno politico. quali\n\n Ritengo necessario essere esplicito su questo punto. Non è stato impartito da me alcun ordine di protezione a favore di forze irregolari, né è stata concessa garanzia che navi 0 uomini M. intervengano per assicurare uno sbarco. Se la semplice presenza di bandiere mercantili britanniche venisse interpretata localmente come una promessa di sicurezza, tale interpretazione non avrebbe origine in istruzioni di questo consolato."
+        },
+        {
+          "rank": 3,
+          "document_id": "dispaccio_console_inglese_01",
+          "content": "## COPIA IN TRADUZIONE DISPACCIO CONSOLARE\n\n Trapani, 10 maggio 1860.\n\n Al Segretario di Stato di S. M. Britannica per gli Affari Esteri.\n\n Milord,\n\n durante le ultime quarantotto ore, il traffico mercantile nel porto di Marsala e lungo gli scali vicini ha mostrato un movimento superiore   all'ordinario. Non vi è, per quanto consta a questo   ufficio, interruzione delle consuete   operazioni commerciali; tuttavia la frequenza delle domande circa l'arrivo la partenza dei bastimenti induce a ritenere che le notizie provenienti dal continente siano seguite con particolare attenzione. che,"
+        },
+        {
+          "rank": 4,
+          "document_id": "garib_d05",
+          "content": "Nello slalo in cui si trova FItalia, non si essere né apparire indipendenti: credete voi, ch'io lacendo, possa persuadere alcuno &aver abbandonato la causa patria Ion manifestandomi mi terranno   nemico, non IC può\n\n 63\n\n dubitate, quindi, io sonO disposto dunirmi aloro, fran - camcnte, piemontesi;   persuadetemi voi duna migliore scelta, ed io vi seguito: Io CSSCr italiano, avanti tutto; ed il  Piemonle non dubita, ch'io colla mia pochezza,   quand'e cessi desser   italiano. Circa alle   questioni   Europce   del giorno mi  sembrano tali da non pitare; Ma prepararsi: tra 1 contendenti non vedo amici che   meritino la   cooperazione nostra di sangue.   Gl'inglesi unici tollerare una nazione   ilaliana, ed appoggiarci;   quando loro convenga, sono del mio parcre, voi voglio 'egli preci -"
+        },
+        {
+          "rank": 5,
+          "document_id": "lettera_salina_01",
+          "content": "le case dell 'occidente hanno udito; per vie che nessuno reputa conveniente nominare; che due vapori potrebbero mostrarsi prima della metà del mese. La voce è giunta con quella singolare puntualità che hanno le notizie quando tutti fingono di non attenderle. Non so chi labbia portata e, soprattutto; non desidero saperlo per iscritto: vi sono tempi nei una lettera troppo chiara diviene indiscreta dun testimone. Ti prego dunque di fare una cosa semplice, che domani possa essere spiegata come ordinaria amministrazione dei nostri fondi. Fa con uomini avvezzi alla strada; e fa' che due granai restino sgombri quanto basta a ricevere provviste 0 a lasciar credere che debbano riceverne. Il pretesto sarà la raccolta anticipata e la necessità di muovere sacchi prima che il caldo li guasti. Nessuno avrà motivo di meravigliarsi; e se qualcuno si meravigliasse; troverà una spiegazione già pronta. Non si prometta nulla a nessuno; né a voce solenne né, tanto meno, con una riga firmata. Essere preparati non significa essersi legati.  Se gli avvenimenti prenderanno una via diversa; carri avranno trasportato grano e 1 granai avranno servito al grano; se invece la costa darà le notizie che taluni aspettano; non saremo costretti a cercare in fretta ciò che avremmo potuto predisporre con calma. Quanto al console; non mi è stata riferita alcuna assicurazione. Egli avrebbe soltanto osservato; con quella freddezza che gli inglesi scambiano per innocenza, che un porto affollato di mercanti vede meno nettamente  le uniformi e distingue con maggiore   difficoltà ciò che commerciale da ciò che non lo è Da una simile frase molti ricaveranno una promessa; io non ve ne alcuna. Fa' pure che chi deve sapere sappia il necessario, ma non di più. Lo Bianco potrà intendere che talune porte debbono restare praticabili senza che gli si dica per chi; e se Sant 'Elia facesse domande; rispondile che la prudenza non ha colore finché non è costretta a mostrarlo. La prudenza, in tempi come questi, consiste nel non arrivare mai gli avvenimenti nel dire, quando siano passati, che ci si trovava là per caso. Tuo affmo F qui quali più leggo dopo poter"
+        }
+      ],
+      "telemetry": {
+        "latency_ms": 2826,
+        "declared_cost_eur": 0.000322,
+        "model_calls": [
+          {
+            "provider": "openai",
+            "model": "gpt-4o-mini",
+            "input_tokens": 1598,
+            "output_tokens": 138,
+            "cached_input_tokens": 0
+          }
+        ]
+      }
+    },
+    {
+      "question_id": "R1_Q005",
+      "question": "In che modo i due giornali descrivono diversamente il consenso popolare?",
+      "answer": "Il giornale liberale sottolinea un consenso popolare implicito, indicando che il silenzio di alcune famiglie non deve essere interpretato come indifferenza, ma come un segno di una decisione già matura. Si evidenzia una concordia di sentimenti, affermando che quando un paese intero pensa la stessa cosa, una firma aggiunge poco [giornale_liberale_01].\n\nAl contrario, il giornale borbonico enfatizza la mancanza di consenso, sostenendo che le azioni di alcuni individui provenienti dal continente avvengono senza un mandato del popolo siciliano. Viene espressa la repulsione da parte della popolazione pacifica rispetto a queste iniziative, e si mette in guardia contro la confusione tra timore ed adesione. Inoltre, viene criticata la diffusione di notizie non verificate e si richiede il supporto di prove concrete per stabilire un consenso autentico [giornale_borbonico_01]. \n\nIn sintesi, il giornale liberale vede segni di un supporto popolare silenzioso, mentre il giornale borbonico nega l'esistenza di un consenso reale, evidenziando paura e disturbo tra la popolazione.",
+      "contexts": [
+        {
+          "rank": 1,
+          "document_id": "giornale_liberale_01",
+          "content": "Da Palermo ci scrivono che molte famiglie  evitano ancora manifestazioni aperte, ma seguono con attenzione le   notizie occidentali. Il silenzio di alcune case non deve essere scambiato a nostro giudizio; con indifferenza: spesso è soltanto 1'ultimo velo d'una decisione già maturata.\n\n Foglio 1"
+        },
+        {
+          "rank": 2,
+          "document_id": "giornale_borbonico_01",
+          "content": "## IL GIORNALE REALE\n\n Anno XXII N. 118 Domenica 13 maggio 860 Palermo\n\n ## AVVENTURIERI FORESTIERI SULLE COSTE DELLISOLA\n\n Una mano di uomini venuti dal continente, senza mandato del popolo siciliano e contro le leggi del Regno, ha osato prendere terra sulla costa occidentale. Essi vengono celebrati dai fogli sovversivi come interpreti d'una pretesa volontà universale; ma la popolazione   pacifica, intenta ai propri  lavori alle proprie   famiglie, vede in simile  impresa il pericolo  d'una guerra portata nelle case.\n\n Le autorità sono chiamate distinguere  il clamore di pochi agitatori dal sentimento vero dell'Isola. In più luoghi gli abitanti avrebbero manifestato timore ripugnanza ad essere coinvolti. Quando   qualche  carro qualche   provvista è stata requisita messa disposizione; non si confonda il timore con l'adesione e la necessità con /'entusiasmo\n\n ## ORDINE E TRANQUILLITÀ"
+        },
+        {
+          "rank": 3,
+          "document_id": "giornale_borbonico_01",
+          "content": "Queste storie; ripetute con l'aria misteriosa che tanto piace agli oziosi, non sono accompagnate da verbali, lettere sottoscritte testimonianze riconoscibili. E facile; dopo Favvenimento, attribuire   intenzione   politica qualunque carro fermo in una corte qualunque granaro aperto per il commercio\n\n Il Governo non deve lasciarsi guidare dalle fantasie dei salotti Ogni accusa richiede un fatto; e ogni fatto nome. Finché nomi carte mancano, le voci restano voci. un La tranquillità   pubblica   esige   invece che si   proceda con documenti nomi requisizioni movimenti sospetti si rivolgano agli uffici competenti senza alimentare racconti anonimi che turbano mercati le famiglie.\n\n Foglio 1"
+        },
+        {
+          "rank": 4,
+          "document_id": "giornale_liberale_01",
+          "content": "se tali disposizioni siano nate da accordo espresso da quella concordia dei sentimenti   che   rende   superflui protocolli.   Quando un paese intero pensa la stessa cosa, una firma aggiunge poco. I nomi dei benefattori verranno tempo debito; per ora basti   sapere che Toccidente non fu colto impreparato.\n\n Salutiamo pertanto quanti, senza rumore, hanno tenuto aperte le vie;   preparato mezzi impedito che F'inerzia d'alcuni diventasse ostacolo alla volontà di tutti\n\n ## CORRISPONDENZE BREVI\n\n Da Trapani si segnala grande affluenza di persone desiderose di notizie dalla costa. I caffè e le case di commercio discutono arrivo gli   orari dei   bastimenti   vengono copiati ricopiati con una sollecitudine che, in tempi ordinari, nessuno avrebbe per simili particolari. ogni"
+        },
+        {
+          "rank": 5,
+          "document_id": "giornale_borbonico_01",
+          "content": "## ORDINE E TRANQUILLITÀ\n\n Si raccomanda ai cittadini di non prestare fede a notizie non confermate di non accorrere presso i porti 0 lungo le strade percorse dalle   truppe 1 negozi restino aperti, servizi continuino, e ciascuno contribuisca alla tranquillità pubblica senza farsi strumento di coloro che sperano di sostituire il disordine alla legge.\n\n ## NOTIZIE DALLE PROVINCE\n\n Le autorità locali sono invitate trasmettere soltanto rapporti   sottoscritti,   distinguendo i fatti dalle   dicerie: In questi giorni ogni ritardo d'un corriere diviene un complotto, carro fermo una prova, conversazione in un palazzo un preteso consiglio di guerra. ogni ogni\n\n ## DELLE FAVOLE CHE CORRONO NEI SALOTTI\n\n Da due  giorni   circolano racconti secondo i famiglie notevoli avrebbero   preparato in anticipo uomini, carri magazzini per favorire gli sbarcati. Si allude a conversazioni segrete, a segnali dati da una casa all'altra, presunte intese con persone straniere. quali"
+        }
+      ],
+      "telemetry": {
+        "latency_ms": 3439,
+        "declared_cost_eur": 0.000352,
+        "model_calls": [
+          {
+            "provider": "openai",
+            "model": "gpt-4o-mini",
+            "input_tokens": 1280,
+            "output_tokens": 266,
+            "cached_input_tokens": 0
+          }
+        ]
+      }
+    },
+    {
+      "question_id": "R1_Q006",
+      "question": "Quali anomalie osserva il funzionario borbonico e quale accusa evita di formulare?",
+      "answer": "Il funzionario borbonico Ruggiero Malaspina osserva anomalie senza avere elementi sufficienti per accusare i notabili di collusione. Nella sua nota, evidenzia l'assenza di documenti firmati e testimonianze riconoscibili, e richiede che si ricerchino le minute degli ordini alle pattuglie e che si interroghino separatamente i responsabili dei tre cancelli, ma evita di formulare un'accusa specifica. Le sue dichiarazioni rimangono quindi nel campo delle osservazioni senza passare a un'accusa formale. \n\nFonte: [nota_funzionario_borbonico_01]",
+      "contexts": [
+        {
+          "rank": 1,
+          "document_id": "giornale_borbonico_01",
+          "content": "Queste storie; ripetute con l'aria misteriosa che tanto piace agli oziosi, non sono accompagnate da verbali, lettere sottoscritte testimonianze riconoscibili. E facile; dopo Favvenimento, attribuire   intenzione   politica qualunque carro fermo in una corte qualunque granaro aperto per il commercio\n\n Il Governo non deve lasciarsi guidare dalle fantasie dei salotti Ogni accusa richiede un fatto; e ogni fatto nome. Finché nomi carte mancano, le voci restano voci. un La tranquillità   pubblica   esige   invece che si   proceda con documenti nomi requisizioni movimenti sospetti si rivolgano agli uffici competenti senza alimentare racconti anonimi che turbano mercati le famiglie.\n\n Foglio 1"
+        },
+        {
+          "rank": 2,
+          "document_id": "elenco_personaggi_01",
+          "content": "| Nome e qualità | Sede o condizione | Carte nelle quali ricorre | Osservazioni |\n| --- | --- | --- | --- |\n| Principe Fabrizio Salina | Notabile palermitano; interessi nell'occidente | Lettera privata; agenda di casa | Usa formule prudenti; dispone carri e granai senza promessa scritta. |\n| Tancredi Falconeri | Giovane di famiglia; frequenta case di Palermo e Trapani | Biglietto a Sant'Elia; agenda | Tratta mezzi e passaggi con linguaggio allusivo; preferisce Mazara al molo. |\n| Edward Hamilton | Console britannico | Dispaccio consolare; registro di corrieri | Distingue traffico mercantile da qualunque garanzia politica. |\n| Ruggiero Malaspina | Funzionario del servizio borbonico | Nota sul porto e sulle pattuglie | Registra anomalie ma dichiara di non poter accusare i notabili di collusione. |\n| Giuseppe Lo Bianco | Commerciante e notaio | Agenda; registri di carri; lettere private | Associato a magazzini, granaglie e disponibilità di dodici carri. |\n| Baronessa Sant'Elia | Proprietaria; casa frequentata da intermediari | Agenda; biglietti; registro dei passaggi | Riceve e trasmette messaggi informali; la sua casa compare nel movimento Trapani-Mazara. |\n| Capitano Lanza | Ufficiale; testimone in memoria successiva | Verbale del 1882 | Rende dichiarazioni molto nette molti anni dopo i fatti, senza carte a sostegno. |"
+        },
+        {
+          "rank": 3,
+          "document_id": "nota_funzionario_borbonico_01",
+          "content": "Ritengo doveroso segnalare l'anomalia; ma non dispongo di elementi sufficienti per accusare mercantile, in imputazione senza firma, testimone ordine riconoscibile. Chiedo pertanto che si ricerchino le minute degli ordini alle pattuglie e che si interroghino separatamente i responsabili dei tre cancelli.\n\n Ruggiero Malaspina\n\n Funzionario addetto al servizio del porto"
+        },
+        {
+          "rank": 4,
+          "document_id": "dispaccio_console_inglese_01",
+          "content": "Mi permetto pertanto di raccomandare che ogni rapporto proveniente da questa costa distingua con esattezza fra presenza britannica; impressione prodotta da tale presenza e impegni effettivamente assunti. Le prime due circostanze sono osservabili; la terza, allo stato degli atti di questo ufficio; non sussiste .\n\n Ho l'onore di essere, Milord,\n\n il Vostro obbedientissimo servitore,\n\n E.H"
+        },
+        {
+          "rank": 5,
+          "document_id": "lettera_salina_01",
+          "content": "le case dell 'occidente hanno udito; per vie che nessuno reputa conveniente nominare; che due vapori potrebbero mostrarsi prima della metà del mese. La voce è giunta con quella singolare puntualità che hanno le notizie quando tutti fingono di non attenderle. Non so chi labbia portata e, soprattutto; non desidero saperlo per iscritto: vi sono tempi nei una lettera troppo chiara diviene indiscreta dun testimone. Ti prego dunque di fare una cosa semplice, che domani possa essere spiegata come ordinaria amministrazione dei nostri fondi. Fa con uomini avvezzi alla strada; e fa' che due granai restino sgombri quanto basta a ricevere provviste 0 a lasciar credere che debbano riceverne. Il pretesto sarà la raccolta anticipata e la necessità di muovere sacchi prima che il caldo li guasti. Nessuno avrà motivo di meravigliarsi; e se qualcuno si meravigliasse; troverà una spiegazione già pronta. Non si prometta nulla a nessuno; né a voce solenne né, tanto meno, con una riga firmata. Essere preparati non significa essersi legati.  Se gli avvenimenti prenderanno una via diversa; carri avranno trasportato grano e 1 granai avranno servito al grano; se invece la costa darà le notizie che taluni aspettano; non saremo costretti a cercare in fretta ciò che avremmo potuto predisporre con calma. Quanto al console; non mi è stata riferita alcuna assicurazione. Egli avrebbe soltanto osservato; con quella freddezza che gli inglesi scambiano per innocenza, che un porto affollato di mercanti vede meno nettamente  le uniformi e distingue con maggiore   difficoltà ciò che commerciale da ciò che non lo è Da una simile frase molti ricaveranno una promessa; io non ve ne alcuna. Fa' pure che chi deve sapere sappia il necessario, ma non di più. Lo Bianco potrà intendere che talune porte debbono restare praticabili senza che gli si dica per chi; e se Sant 'Elia facesse domande; rispondile che la prudenza non ha colore finché non è costretta a mostrarlo. La prudenza, in tempi come questi, consiste nel non arrivare mai gli avvenimenti nel dire, quando siano passati, che ci si trovava là per caso. Tuo affmo F qui quali più leggo dopo poter"
+        }
+      ],
+      "telemetry": {
+        "latency_ms": 2103,
+        "declared_cost_eur": 0.000327,
+        "model_calls": [
+          {
+            "provider": "openai",
+            "model": "gpt-4o-mini",
+            "input_tokens": 1611,
+            "output_tokens": 142,
+            "cached_input_tokens": 0
+          }
+        ]
+      }
+    },
+    {
+      "question_id": "R1_Q007",
+      "question": "Le fonti di Act 1-2 provano un accordo formale dei notabili prima dello sbarco?",
+      "answer": "Le fonti disponibili non permettono di stabilire con certezza un accordo formale dei notabili prima dello sbarco. Esistono indizi di attività preparatorie e di una certa concordia tra i notabili, ma non sono presenti prove concrete come protocolli firmati o documenti ufficiali. \n\nAd esempio, si afferma che \"quando un paese intero pensa la stessa cosa, una firma aggiunge poco\" [giornale_liberale_01], suggerendo un consenso generale piuttosto che un accordo formale. Inoltre, il \"funzionario del servizio borbonico\" osserva anomalie e preparativi, ma non riesce ad accusare i notabili di collusione [elenco_personaggi_01]. Le informazioni circolanti tra le autorità e le dicerie nelle varie fonti non sono sufficienti a provare un'intesa ufficiale [giornale_borbonico_01].",
+      "contexts": [
+        {
+          "rank": 1,
+          "document_id": "giornale_liberale_01",
+          "content": "se tali disposizioni siano nate da accordo espresso da quella concordia dei sentimenti   che   rende   superflui protocolli.   Quando un paese intero pensa la stessa cosa, una firma aggiunge poco. I nomi dei benefattori verranno tempo debito; per ora basti   sapere che Toccidente non fu colto impreparato.\n\n Salutiamo pertanto quanti, senza rumore, hanno tenuto aperte le vie;   preparato mezzi impedito che F'inerzia d'alcuni diventasse ostacolo alla volontà di tutti\n\n ## CORRISPONDENZE BREVI\n\n Da Trapani si segnala grande affluenza di persone desiderose di notizie dalla costa. I caffè e le case di commercio discutono arrivo gli   orari dei   bastimenti   vengono copiati ricopiati con una sollecitudine che, in tempi ordinari, nessuno avrebbe per simili particolari. ogni"
+        },
+        {
+          "rank": 2,
+          "document_id": "giornale_liberale_01",
+          "content": "Marsala, ci scrivono, il popolo avrebbe veduto nei nuovi arrivati non forestieri ma fratelli. Le campane, le porte, balconi le piazze sono descritti come altrettante testimonianze d'un consenso già compiuto. Non vi sarebbe stata esitazione, se non quella naturale di chi attende il momento opportuno per trasformare un sentimento privato in atto pubblico:\n\n La Sicilia; in una parola; attendeva. E se in qualche casa si volle attendere dietro le persiane, ciò non muta la sostanza del moto: anche la prudenza dei   padri essere una forma dell'entusiasmo dei figli. può\n\n ## DAI PORTI DELLOCCIDENTE\n\n Corrispondenti che non possiamo nominare per ragioni facilmente   comprensibili ci assicurano che commercianti, vetturali proprietari di magazzini abbiano spontaneamente predisposto   quanto   poteva occorrere movimento delle persone delle vettovaglie. Si parla di carri tenuti liberi, di granai sgombri, di strade interne sorvegliate perché restassero praticabili."
+        },
+        {
+          "rank": 3,
+          "document_id": "nota_funzionario_borbonico_01",
+          "content": "Tre cancelli di   servizio   rimasero per il   passaggio delle merci. capisquadra civili sostengono che si trattasse di attività portuale ordinaria e ricordano che, nei giorni di traffico intenso; tali accessi vengono talvolta usati per evitare ingombro alla porta principale. La spiegazione non è, in sé, inverosimile; resta però singolare che F'apertura sia coincisa con una notte di tante voci e con la riduzione delle pattuglie sulle banchine. aperti\n\n Ho inoltre verificato la presenza di carri riuniti in numero superiore a quello che impiegati del dazio ricordano per le giornate precedenti. Alcuni erano vuoti, altri dichiarati destinati a farina e granaglie. Più persone affermano che essi fossero stati predisposti prima che l'arrivo dei volontari fosse conosciuto pubblicamente in città. Non mi è stato possibile stabilire chi ne avesse dato ordine, né se la preparazione avesse fine politico 0 soltanto commerciale. già gli"
+        },
+        {
+          "rank": 4,
+          "document_id": "elenco_personaggi_01",
+          "content": "| Nome e qualità | Sede o condizione | Carte nelle quali ricorre | Osservazioni |\n| --- | --- | --- | --- |\n| Principe Fabrizio Salina | Notabile palermitano; interessi nell'occidente | Lettera privata; agenda di casa | Usa formule prudenti; dispone carri e granai senza promessa scritta. |\n| Tancredi Falconeri | Giovane di famiglia; frequenta case di Palermo e Trapani | Biglietto a Sant'Elia; agenda | Tratta mezzi e passaggi con linguaggio allusivo; preferisce Mazara al molo. |\n| Edward Hamilton | Console britannico | Dispaccio consolare; registro di corrieri | Distingue traffico mercantile da qualunque garanzia politica. |\n| Ruggiero Malaspina | Funzionario del servizio borbonico | Nota sul porto e sulle pattuglie | Registra anomalie ma dichiara di non poter accusare i notabili di collusione. |\n| Giuseppe Lo Bianco | Commerciante e notaio | Agenda; registri di carri; lettere private | Associato a magazzini, granaglie e disponibilità di dodici carri. |\n| Baronessa Sant'Elia | Proprietaria; casa frequentata da intermediari | Agenda; biglietti; registro dei passaggi | Riceve e trasmette messaggi informali; la sua casa compare nel movimento Trapani-Mazara. |\n| Capitano Lanza | Ufficiale; testimone in memoria successiva | Verbale del 1882 | Rende dichiarazioni molto nette molti anni dopo i fatti, senza carte a sostegno. |"
+        },
+        {
+          "rank": 5,
+          "document_id": "giornale_borbonico_01",
+          "content": "## ORDINE E TRANQUILLITÀ\n\n Si raccomanda ai cittadini di non prestare fede a notizie non confermate di non accorrere presso i porti 0 lungo le strade percorse dalle   truppe 1 negozi restino aperti, servizi continuino, e ciascuno contribuisca alla tranquillità pubblica senza farsi strumento di coloro che sperano di sostituire il disordine alla legge.\n\n ## NOTIZIE DALLE PROVINCE\n\n Le autorità locali sono invitate trasmettere soltanto rapporti   sottoscritti,   distinguendo i fatti dalle   dicerie: In questi giorni ogni ritardo d'un corriere diviene un complotto, carro fermo una prova, conversazione in un palazzo un preteso consiglio di guerra. ogni ogni\n\n ## DELLE FAVOLE CHE CORRONO NEI SALOTTI\n\n Da due  giorni   circolano racconti secondo i famiglie notevoli avrebbero   preparato in anticipo uomini, carri magazzini per favorire gli sbarcati. Si allude a conversazioni segrete, a segnali dati da una casa all'altra, presunte intese con persone straniere. quali"
+        }
+      ],
+      "telemetry": {
+        "latency_ms": 3926,
+        "declared_cost_eur": 0.000364,
+        "model_calls": [
+          {
+            "provider": "openai",
+            "model": "gpt-4o-mini",
+            "input_tokens": 1629,
+            "output_tokens": 199,
+            "cached_input_tokens": 0
+          }
+        ]
+      }
+    },
+    {
+      "question_id": "R1_Q008",
+      "question": "Quali indizi, letti insieme, suggeriscono una preparazione precedente all’arrivo pubblico dei volontari?",
+      "answer": "Dai brani disponibili, diversi indizi suggeriscono una preparazione precedente all'arrivo pubblico dei volontari:\n\n1. **Carri predisposti**: C'è un'affermazione che indica che alcuni carri, più numerosi del solito, erano stati predisposti prima che l'arrivo dei volontari fosse conosciuto pubblicamente in città, ma non è chiaro chi avesse dato tale ordine [nota_funzionario_borbonico_01].\n\n2. **Attività portuale**: L'apertura di tre cancelli di servizio in concomitanza con una notte rumorosa e la riduzione delle pattuglie sulle banchine suggerisce una certa pianificazione anticipata, anche se la spiegazione ufficiale potrebbe sembrare plausibile [nota_funzionario_borbonico_01].\n\n3. **Preparativi commerciali e segreti**: Si parla di conversazioni segrete e di famiglie notevoli che avrebbero preparato uomini e magazzini per favorire gli sbarcati, il che suggerisce che ci fossero delle intese già in atto prima dell'arrivo dei volontari [giornale_borbonico_01].\n\n4. **Preoccupazione per la segretezza**: Una lettera fa riferimento alla necessità di tenere pronti carri e granai senza destare sospetti, il che implica una preparazione riflessiva e attenta prima dell'arrivo pubblicizzato [lettera_salina_01].\n\n5. **Consenso popolare già compiuto**: La popolazione era già predisposta a vedere i nuovi arrivati come \"non forestieri ma fratelli\", il che indica che c'era un clima di attesa e preparazione emotiva, non solo logistica [giornale_liberale_01].\n\n6. **Attività spontanea**: Commercianti e vetturali avrebbero preparato quanto necessario per un eventuale movimento dei volontari, suggerendo un'organizzazione anticipata da parte della comunità [giornale_liberale_01].\n\nIn sintesi, molteplici indizi indicano una preparazione collettiva e attenta che anticipava l'arrivo pubblico dei volontari, sia sul piano logistico che emotivo.",
+      "contexts": [
+        {
+          "rank": 1,
+          "document_id": "nota_funzionario_borbonico_01",
+          "content": "Tre cancelli di   servizio   rimasero per il   passaggio delle merci. capisquadra civili sostengono che si trattasse di attività portuale ordinaria e ricordano che, nei giorni di traffico intenso; tali accessi vengono talvolta usati per evitare ingombro alla porta principale. La spiegazione non è, in sé, inverosimile; resta però singolare che F'apertura sia coincisa con una notte di tante voci e con la riduzione delle pattuglie sulle banchine. aperti\n\n Ho inoltre verificato la presenza di carri riuniti in numero superiore a quello che impiegati del dazio ricordano per le giornate precedenti. Alcuni erano vuoti, altri dichiarati destinati a farina e granaglie. Più persone affermano che essi fossero stati predisposti prima che l'arrivo dei volontari fosse conosciuto pubblicamente in città. Non mi è stato possibile stabilire chi ne avesse dato ordine, né se la preparazione avesse fine politico 0 soltanto commerciale. già gli"
+        },
+        {
+          "rank": 2,
+          "document_id": "giornale_liberale_01",
+          "content": "se tali disposizioni siano nate da accordo espresso da quella concordia dei sentimenti   che   rende   superflui protocolli.   Quando un paese intero pensa la stessa cosa, una firma aggiunge poco. I nomi dei benefattori verranno tempo debito; per ora basti   sapere che Toccidente non fu colto impreparato.\n\n Salutiamo pertanto quanti, senza rumore, hanno tenuto aperte le vie;   preparato mezzi impedito che F'inerzia d'alcuni diventasse ostacolo alla volontà di tutti\n\n ## CORRISPONDENZE BREVI\n\n Da Trapani si segnala grande affluenza di persone desiderose di notizie dalla costa. I caffè e le case di commercio discutono arrivo gli   orari dei   bastimenti   vengono copiati ricopiati con una sollecitudine che, in tempi ordinari, nessuno avrebbe per simili particolari. ogni"
+        },
+        {
+          "rank": 3,
+          "document_id": "giornale_borbonico_01",
+          "content": "## ORDINE E TRANQUILLITÀ\n\n Si raccomanda ai cittadini di non prestare fede a notizie non confermate di non accorrere presso i porti 0 lungo le strade percorse dalle   truppe 1 negozi restino aperti, servizi continuino, e ciascuno contribuisca alla tranquillità pubblica senza farsi strumento di coloro che sperano di sostituire il disordine alla legge.\n\n ## NOTIZIE DALLE PROVINCE\n\n Le autorità locali sono invitate trasmettere soltanto rapporti   sottoscritti,   distinguendo i fatti dalle   dicerie: In questi giorni ogni ritardo d'un corriere diviene un complotto, carro fermo una prova, conversazione in un palazzo un preteso consiglio di guerra. ogni ogni\n\n ## DELLE FAVOLE CHE CORRONO NEI SALOTTI\n\n Da due  giorni   circolano racconti secondo i famiglie notevoli avrebbero   preparato in anticipo uomini, carri magazzini per favorire gli sbarcati. Si allude a conversazioni segrete, a segnali dati da una casa all'altra, presunte intese con persone straniere. quali"
+        },
+        {
+          "rank": 4,
+          "document_id": "lettera_salina_01",
+          "content": "le case dell 'occidente hanno udito; per vie che nessuno reputa conveniente nominare; che due vapori potrebbero mostrarsi prima della metà del mese. La voce è giunta con quella singolare puntualità che hanno le notizie quando tutti fingono di non attenderle. Non so chi labbia portata e, soprattutto; non desidero saperlo per iscritto: vi sono tempi nei una lettera troppo chiara diviene indiscreta dun testimone. Ti prego dunque di fare una cosa semplice, che domani possa essere spiegata come ordinaria amministrazione dei nostri fondi. Fa con uomini avvezzi alla strada; e fa' che due granai restino sgombri quanto basta a ricevere provviste 0 a lasciar credere che debbano riceverne. Il pretesto sarà la raccolta anticipata e la necessità di muovere sacchi prima che il caldo li guasti. Nessuno avrà motivo di meravigliarsi; e se qualcuno si meravigliasse; troverà una spiegazione già pronta. Non si prometta nulla a nessuno; né a voce solenne né, tanto meno, con una riga firmata. Essere preparati non significa essersi legati.  Se gli avvenimenti prenderanno una via diversa; carri avranno trasportato grano e 1 granai avranno servito al grano; se invece la costa darà le notizie che taluni aspettano; non saremo costretti a cercare in fretta ciò che avremmo potuto predisporre con calma. Quanto al console; non mi è stata riferita alcuna assicurazione. Egli avrebbe soltanto osservato; con quella freddezza che gli inglesi scambiano per innocenza, che un porto affollato di mercanti vede meno nettamente  le uniformi e distingue con maggiore   difficoltà ciò che commerciale da ciò che non lo è Da una simile frase molti ricaveranno una promessa; io non ve ne alcuna. Fa' pure che chi deve sapere sappia il necessario, ma non di più. Lo Bianco potrà intendere che talune porte debbono restare praticabili senza che gli si dica per chi; e se Sant 'Elia facesse domande; rispondile che la prudenza non ha colore finché non è costretta a mostrarlo. La prudenza, in tempi come questi, consiste nel non arrivare mai gli avvenimenti nel dire, quando siano passati, che ci si trovava là per caso. Tuo affmo F qui quali più leggo dopo poter"
+        },
+        {
+          "rank": 5,
+          "document_id": "giornale_liberale_01",
+          "content": "Marsala, ci scrivono, il popolo avrebbe veduto nei nuovi arrivati non forestieri ma fratelli. Le campane, le porte, balconi le piazze sono descritti come altrettante testimonianze d'un consenso già compiuto. Non vi sarebbe stata esitazione, se non quella naturale di chi attende il momento opportuno per trasformare un sentimento privato in atto pubblico:\n\n La Sicilia; in una parola; attendeva. E se in qualche casa si volle attendere dietro le persiane, ciò non muta la sostanza del moto: anche la prudenza dei   padri essere una forma dell'entusiasmo dei figli. può\n\n ## DAI PORTI DELLOCCIDENTE\n\n Corrispondenti che non possiamo nominare per ragioni facilmente   comprensibili ci assicurano che commercianti, vetturali proprietari di magazzini abbiano spontaneamente predisposto   quanto   poteva occorrere movimento delle persone delle vettovaglie. Si parla di carri tenuti liberi, di granai sgombri, di strade interne sorvegliate perché restassero praticabili."
+        }
+      ],
+      "telemetry": {
+        "latency_ms": 4310,
+        "declared_cost_eur": 0.000553,
+        "model_calls": [
+          {
+            "provider": "openai",
+            "model": "gpt-4o-mini",
+            "input_tokens": 1828,
+            "output_tokens": 464,
+            "cached_input_tokens": 0
+          }
+        ]
+      }
+    }
+  ]
+}
