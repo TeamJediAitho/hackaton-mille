@@ -93,56 +93,30 @@ Before opening a PR, check for other open PRs with `gh pr list`. If the new feat
 
 ## Python
 
-### Package manager
+### Environment
 
-The project uses **uv** as its Python package and project manager.
-
-Do not use `pip` directly to install or update project dependencies.
-
-Use:
+The project uses a standard Python virtual environment. Setup:
 
 ```bash
-uv add <package>
-uv remove <package>
-uv sync
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+python -m pip install -r requirements.txt
 ```
 
-To execute Python or project tools, prefer:
-
-```bash
-uv run python ...
-uv run <command>
-```
-
-There is no need to manually activate `.venv` when using `uv run`.
+Always activate the virtual environment before running project commands.
 
 ### Dependencies
 
-Project dependencies must be declared in `pyproject.toml`.
+Project dependencies are declared in `requirements.txt`.
 
-Use `uv add` to add dependencies instead of manually editing `pyproject.toml` whenever possible.
-
-The `uv.lock` file must remain synchronized with `pyproject.toml`.
-
-Do not manually edit `uv.lock`.
-
-After changing dependencies, run:
+To install or update dependencies:
 
 ```bash
-uv sync
+pip install -r requirements.txt
 ```
 
-### Environment
-
-Do not manually create virtual environments with:
-
-```bash
-python -m venv ...
-```
-
-when the project is already configured to use `uv`.
-
-Do not install project dependencies globally.
+Do not add dependencies without first checking the project already provides an equivalent solution.
 
 ## Testing
 
@@ -158,7 +132,7 @@ Prefer commands defined by the project in `pyproject.toml`, `Makefile`, `README`
 For example:
 
 ```bash
-uv run pytest
+pytest
 ```
 
 Do not assume that `pytest` is the project's test runner without first checking the repository configuration.
@@ -179,7 +153,7 @@ Before adding a new dependency:
 1. Check whether the project already provides an equivalent solution.
 2. Consider whether the functionality can be implemented without a new dependency.
 3. Verify compatibility with the project's Python version and existing dependencies.
-4. Add the dependency using `uv add`.
+4. Add the dependency to `requirements.txt`.
 
 Do not add dependencies solely for convenience when the requested functionality can be implemented easily with the standard library.
 
@@ -192,8 +166,6 @@ Before declaring a task complete, verify:
 * [ ] A PR from the feature branch into `main` has been opened via `gh`, with a feature description and a testing checklist.
 * [ ] Dependencies on other open PRs have been checked (`gh pr list`) and documented in the PR.
 * [ ] The PR has been left open for manual review (not self-merged).
-* [ ] Dependencies are managed through `uv`.
-* [ ] `pyproject.toml` and `uv.lock` are synchronized.
 * [ ] Relevant tests have been run.
 * [ ] Linting, formatting, and type checking have been run if configured.
 * [ ] No unrelated changes have been introduced.
