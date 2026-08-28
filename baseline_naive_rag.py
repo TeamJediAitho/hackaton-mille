@@ -234,6 +234,8 @@ TRIM_RATIO = float(os.getenv("TRIM_RATIO", "0"))
 # 0 = nessun limite. Le domande cross-document hanno cinque slot per due o tre fonti: un
 # documento lungo e rumoroso (garib_d05, garib_d08) puo' prenderseli quasi tutti.
 MAX_PER_DOC = int(os.getenv("MAX_PER_DOC", "2"))
+# E11: LEXICAL_META=0 indicizza in BM25 il solo testo del chunk, per gli A/B.
+LEXICAL_META = os.getenv("LEXICAL_META", "1") == "1"
 # Sotto questa soglia di caratteri indicizzati un documento e' muto: e' entrato nell'indice ma non
 # puo' rispondere a niente (tipico delle immagini senza testo, es. una mappa senza annotazioni).
 MUTE_DOCUMENT_CHARS = 40
@@ -505,9 +507,12 @@ def _lexical_text(chunk: Any) -> str:
     qualifica entrano quindi nell'indice lessicale. **Il testo consegnato al generatore non
     cambia**: i contesti restano il `chunk.text` originale, tracciabile nel corpus.
     """
+    text = getattr(chunk, "text", "") or ""
+    if not LEXICAL_META:
+        return text
     metadata = getattr(chunk, "metadata", None)
     return " ".join([
-        getattr(chunk, "text", "") or "",
+        text,
         _meta_get(metadata, "title"),
         _meta_get(metadata, "qualifica"),
         _meta_get(metadata, "reliability"),
